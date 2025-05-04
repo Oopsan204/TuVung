@@ -1,0 +1,72 @@
+{
+  "Cơ bản": [
+    "hello",
+    "goodbye",
+    "thank you",
+    "sorry",
+    "book"
+  ],
+  "Học tập": [
+    "book",
+    "computer",
+    "school",
+    "teacher",
+    "student",
+    "smart"
+  ],
+  "Tính cách": [
+    "beautiful",
+    "happy",
+    "sad",
+    "smart",
+    "difficult"
+  ],
+  "lesson2-TN": [
+    "molding",
+    "cold",
+    "casting",
+    "machining",
+    "sheet metal forming",
+    "welding",
+    "turning",
+    "lathe",
+    "stamping",
+    "extrusion",
+    "forging",
+    "electroplating"
+  ],
+  "lesson1-eng2": [
+    "sue",
+    "doctor",
+    "nurse",
+    "actor",
+    "unemployed",
+    "police officer",
+    "fire fighter",
+    "post man",
+    "steel",
+    "factory",
+    "mill",
+    "plant",
+    "wind mill",
+    "nuclear plant",
+    "carpenter",
+    "manual work",
+    "physical work",
+    "intellectual",
+    "science",
+    "labor",
+    "work force",
+    "tiring",
+    "physical burnout",
+    "supervisor",
+    "contruction site",
+    "comedian",
+    "wage",
+    "productive",
+    "temperature",
+    "princess",
+    "canal",
+    "cashier"
+  ]
+}

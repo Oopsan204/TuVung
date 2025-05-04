@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Từ vựng tiếng Anh - Học trực tuyến</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Từ vựng tiếng Anh</h1>
+            <p>Học từ vựng tiếng Anh hiệu quả</p>
+        </header>
+
+        <div class="tabs">
+            <button class="tab-button active" data-tab="dictionary">Từ điển</button>
+            <button class="tab-button" data-tab="learn">Học từ mới</button>
+            <button class="tab-button" data-tab="quiz">Kiểm tra</button>
+            <button class="tab-button" data-tab="flashcard">Thẻ ghi nhớ</button>
+            <button class="tab-button" data-tab="topics">Chủ đề</button>
+            <button class="tab-button" data-tab="synonyms">Từ đồng nghĩa</button>
+            <button class="tab-button" data-tab="settings">Cài đặt</button>
+            <button class="tab-button" data-tab="cloud">Đám mây</button>
+        </div>
+
+        <div class="tab-content">
+            <!-- Tab học từ mới -->
+            <div class="tab-pane" id="learn">
+                <div class="vocabulary-section">
+                    <!-- Intro and package selection -->
+                    <div class="learn-header">
+                        <h3><i class="fas fa-graduation-cap"></i> Học từ mới</h3>
+                        <div class="learn-config">
+                            <div class="config-group">
+                                <label for="learn-package">Chọn bộ từ vựng:</label>
+                                <select id="learn-package" class="select-dropdown">
+                                    <option value="all">Tất cả từ vựng</option>
+                                    <!-- Các gói từ vựng sẽ được nạp bằng JavaScript -->
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Current word display -->
+                    <div class="current-word-display">
+                        <div class="word-card">
+                            <div class="word-front" id="learn-word-front">
+                                <span id="current-word">...</span>
+                                <button id="word-speak" class="speak-button">
+                                    <i class="fas fa-volume-up"></i>
+                                </button>
+                            </div>
+                            <div class="word-translation" id="learn-word-translation">
+                                <span id="word-translation">...</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Learning progress -->
+                    <div class="learn-progress-container">
+                        <div class="progress-text" id="learn-word-count">Từ 1/50</div>
+                        <div class="progress-bar-container">
+                            <div class="progress-bar" id="learning-progress" style="width: 0%"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- Phân chia task học từ vựng -->
+                    <div class="practice-task-selection">
+                        <h4>Chọn kiểu luyện tập</h4>
+                        <div class="task-buttons">
+                            <button id="task-dictation" class="btn task-btn active">
+                                <i class="fas fa-headphones"></i> Nghe viết từ
+                            </button>
+                            <button id="task-translation" class="btn task-btn">
+                                <i class="fas fa-language"></i> Xem nghĩa viết từ
+                            </button>
+                            <button id="task-flashcard" class="btn task-btn">
+                                <i class="fas fa-clone"></i> Thẻ ghi nhớ nhanh
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Task 1: Nghe và viết lại từ -->
+                    <div class="practice-section active-task" id="dictation-task">
+                        <div class="practice-card">
+                            <h4><i class="fas fa-headphones"></i> Nghe và viết lại từ</h4>
+                            <div class="practice-controls">
+                                <button id="dictation-speak" class="btn primary">
+                                    <i class="fas fa-volume-up"></i> Nghe từ
+                                </button>
+                            </div>
+                            <div class="input-group">
+                                <input type="text" id="dictation-input" placeholder="Nhập từ tiếng Anh bạn nghe được...">
+                                <button id="check-dictation" class="btn primary">Kiểm tra</button>
+                            </div>
+                            <div id="dictation-result" class="result-box"></div>
+                            <button id="dictation-next" class="btn secondary btn-next">
+                                Từ tiếp theo <i class="fas fa-arrow-right"></i>
+                            </button>
+                            <div class="practice-tip">
+                                <i class="fas fa-lightbulb"></i> Mẹo: Nhấn phím Enter sau khi nhập để kiểm tra từ
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Task 2: Nhìn nghĩa viết từ -->
+                    <div class="practice-section" id="translation-task">
+                        <div class="practice-card">
+                            <h4><i class="fas fa-language"></i> Nhìn nghĩa và viết từ</h4>
+                            <div class="meaning-display">
+                                <p>Nghĩa tiếng Việt:</p>
+                                <h3 id="meaning-text">...</h3>
+                            </div>
+                            <div class="input-group">
+                                <input type="text" id="word-input" placeholder="Nhập từ tiếng Anh tương ứng...">
+                                <button id="check-word" class="btn primary">Kiểm tra</button>
+                            </div>
+                            <div id="word-result" class="result-box"></div>
+                            <button id="translation-next" class="btn secondary btn-next">
+                                Nghĩa tiếp theo <i class="fas fa-arrow-right"></i>
+                            </button>
+                            <div class="practice-tip">
+                                <i class="fas fa-lightbulb"></i> Mẹo: Nhấn phím Enter sau khi nhập để kiểm tra từ
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Task 3: Thẻ ghi nhớ nhanh -->
+                    <div class="practice-section" id="quick-flashcard-task">
+                        <div class="practice-card">
+                            <h4><i class="fas fa-clone"></i> Thẻ ghi nhớ nhanh</h4>
+                            <div class="quick-flashcard">
+                                <div class="quick-flashcard-front active" id="quick-card-front">
+                                    <h2 id="quick-card-word">...</h2>
+                                    <p>Nhấp để xem nghĩa</p>
+                                </div>
+                                <div class="quick-flashcard-back" id="quick-card-back">
+                                    <h2 id="quick-card-translation">...</h2>
+                                    <p>Nhấp để xem từ</p>
+                                </div>
+                            </div>
+                            <div class="flashcard-buttons">
+                                <button id="quick-card-prev" class="btn secondary">
+                                    <i class="fas fa-arrow-left"></i> Trước
+                                </button>
+                                <button id="quick-card-flip" class="btn primary">Lật thẻ (Space)</button>
+                                <button id="quick-card-speak" class="btn secondary">
+                                    <i class="fas fa-volume-up"></i> Đọc
+                                </button>
+                                <button id="quick-card-next" class="btn secondary">
+                                    Tiếp <i class="fas fa-arrow-right"></i>
+                                </button>
+                            </div>
+                            <div class="practice-tip">
+                                <i class="fas fa-lightbulb"></i> Mẹo: Sử dụng phím mũi tên để di chuyển giữa các từ
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab từ điển -->
+            <div class="tab-pane active" id="dictionary">
+                <div class="dictionary-section">
+                    <div class="dictionary-header">
+                        <h3><i class="fas fa-book"></i> Từ điển Anh - Việt</h3>
+                        <div class="dictionary-stats">
+                            Tổng số từ: <span id="dictionary-count" class="badge">0</span>
+                        </div>
+                    </div>
+                    
+                    <div class="dictionary-search">
+                        <div class="search-container">
+                            <i class="fas fa-search search-icon"></i>
+                            <input type="text" id="dictionary-search" placeholder="Tìm kiếm từ vựng hoặc nghĩa..." autocomplete="off">
+                            <button id="clear-search" class="btn secondary">
+                                <i class="fas fa-times"></i> Xóa
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="dictionary-content">
+                        <div class="dictionary-add">
+                            <h4><i class="fas fa-plus-circle"></i> Thêm từ mới</h4>
+                            <div class="input-group add-word-group">
+                                <div class="input-with-icon">
+                                    <i class="fas fa-language"></i>
+                                    <input type="text" id="dict-word-english" placeholder="Từ tiếng Anh">
+                                </div>
+                                <div class="input-with-icon">
+                                    <i class="fas fa-comment-alt"></i>
+                                    <input type="text" id="dict-word-vietnamese" placeholder="Nghĩa tiếng Việt">
+                                </div>
+                                <button id="dict-add-new-word" class="btn success">
+                                    <i class="fas fa-plus"></i> Thêm từ
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="dictionary-list-container">
+                            <h4><i class="fas fa-list"></i> Danh sách từ vựng</h4>
+                            <div class="list-container dictionary-table-container">
+                                <table id="dictionary-table">
+                                    <thead>
+                                        <tr>
+                                            <th width="5%">STT</th>
+                                            <th width="40%">Tiếng Anh</th>
+                                            <th width="40%">Tiếng Việt</th>
+                                            <th width="15%">Thao tác</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="dictionary-body">
+                                        <!-- Danh sách từ vựng sẽ được nạp bằng JavaScript -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab kiểm tra -->
+            <div class="tab-pane" id="quiz">
+                <div class="quiz-section">
+                    <div class="quiz-config">
+                        <h3>Thiết lập kiểm tra</h3>
+                        <div class="config-group">
+                            <label for="quiz-package">Chọn gói từ vựng:</label>
+                            <select id="quiz-package" class="select-dropdown">
+                                <option value="all">Tất cả từ vựng</option>
+                                <!-- Các gói từ vựng sẽ được nạp bằng JavaScript -->
+                            </select>
+                        </div>
+                        <div class="config-group">
+                            <label>Loại câu hỏi:</label>
+                            <div class="radio-group">
+                                <label>
+                                    <input type="radio" name="quiz-type" value="eng_to_viet" checked> 
+                                    Tiếng Anh → Tiếng Việt
+                                </label>
+                                <label>
+                                    <input type="radio" name="quiz-type" value="viet_to_eng"> 
+                                    Tiếng Việt → Tiếng Anh
+                                </label>
+                            </div>
+                        </div>
+                        <div class="config-group">
+                            <label for="quiz-count">Số lượng câu hỏi:</label>
+                            <select id="quiz-count" class="select-dropdown">
+                                <option value="5">5</option>
+                                <option value="10" selected>10</option>
+                                <option value="15">15</option>
+                                <option value="20">20</option>
+                                <option value="all">Tất cả</option>
+                            </select>
+                        </div>
+                        <button id="start-quiz" class="btn primary">Bắt đầu kiểm tra</button>
+                    </div>
+                    
+                    <div class="quiz-question-section">
+                        <div class="quiz-question-card">
+                            <h3 id="quiz-question-text">Chọn gói từ vựng và bấm 'Bắt đầu kiểm tra' để bắt đầu</h3>
+                            <div class="quiz-options" id="quiz-options">
+                                <!-- Các lựa chọn sẽ được nạp bằng JavaScript -->
+                            </div>
+                            <div class="quiz-controls">
+                                <button id="next-question" class="btn secondary" disabled>Câu tiếp theo</button>
+                                <button id="submit-quiz" class="btn primary" disabled>Nộp bài</button>
+                            </div>
+                            <div id="quiz-status" class="quiz-status"></div>
+                        </div>
+                    </div>
+
+                    <div class="quiz-result-section">
+                        <h3>Kết quả kiểm tra</h3>
+                        <div id="quiz-result" class="quiz-result"></div>
+                        <button id="view-details" class="btn secondary" disabled>Xem chi tiết</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab thẻ ghi nhớ -->
+            <div class="tab-pane" id="flashcard">
+                <div class="flashcard-section">
+                    <div class="flashcard-config">
+                        <div class="config-group">
+                            <label for="flashcard-package">Chọn gói từ vựng:</label>
+                            <select id="flashcard-package" class="select-dropdown">
+                                <option value="all">Tất cả từ vựng</option>
+                                <!-- Các gói từ vựng sẽ được nạp bằng JavaScript -->
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Thay đổi cấu trúc thẻ ghi nhớ -->
+                    <div class="flashcards-container">
+                        <!-- Mặt trước -->
+                        <div id="flashcard-front" class="flashcard-card active">
+                            <h2 id="flashcard-word">Hello</h2>
+                            <button id="flashcard-speak" class="speak-button">
+                                <i class="fas fa-volume-up"></i>
+                            </button>
+                            <p class="flip-instruction">Nhấp để lật thẻ</p>
+                        </div>
+                        
+                        <!-- Mặt sau -->
+                        <div id="flashcard-back" class="flashcard-card">
+                            <h2 id="flashcard-translation">Xin chào</h2>
+                            <p id="flashcard-example" class="flashcard-example">This is an example with the word "hello".</p>
+                            <p class="flip-instruction">Nhấp để lật thẻ</p>
+                        </div>
+                    </div>
+
+                    <div class="flashcard-controls">
+                        <button id="prev-flashcard" class="btn secondary">
+                            <i class="fas fa-arrow-left"></i> Thẻ trước
+                        </button>
+                        <button id="flip-flashcard" class="btn primary">Lật thẻ (Space)</button>
+                        <button id="toggle-hint" class="btn secondary">Hiện gợi ý</button>
+                        <button id="mark-learned" class="btn success">Đánh dấu đã học</button>
+                        <button id="next-flashcard" class="btn secondary">
+                            Thẻ tiếp theo <i class="fas fa-arrow-right"></i>
+                        </button>
+                    </div>
+
+                    <div class="progress-container">
+                        <div class="progress-text" id="flashcard-progress">Từ 1/50 - Đã học: 0 (0%)</div>
+                        <div class="progress-bar-container">
+                            <div class="progress-bar" id="learn-progress" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab chủ đề -->
+            <div class="tab-pane" id="topics">
+                <div class="topics-section">
+                    <div class="topics-container">
+                        <div class="left-panel">
+                            <h3>Chủ đề từ vựng</h3>
+                            <div class="list-container">
+                                <ul id="topics-list" class="selection-list">
+                                    <!-- Các chủ đề sẽ được nạp bằng JavaScript -->
+                                </ul>
+                            </div>
+                            <div class="button-group">
+                                <button id="new-topic" class="btn secondary">Tạo chủ đề mới</button>
+                                <button id="delete-topic" class="btn danger">Xóa chủ đề</button>
+                            </div>
+                        </div>
+                        <div class="right-panel">
+                            <h3>Từ vựng trong chủ đề</h3>
+                            <div class="list-container">
+                                <ul id="topic-words-list" class="selection-list">
+                                    <!-- Các từ trong chủ đề sẽ được nạp bằng JavaScript -->
+                                </ul>
+                            </div>
+                            <div class="button-group">
+                                <button id="add-to-topic" class="btn primary">Thêm từ vào chủ đề</button>
+                                <button id="remove-from-topic" class="btn danger">Xóa từ khỏi chủ đề</button>
+                                <button id="auto-classify" class="btn secondary">Phân loại tự động</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="topics-message" class="message-area"></div>
+                </div>
+            </div>
+
+            <!-- Tab từ đồng nghĩa -->
+            <div class="tab-pane" id="synonyms">
+                <div class="synonyms-section">
+                    <div class="synonyms-container">
+                        <div class="left-panel">
+                            <h3>Nhóm từ đồng nghĩa</h3>
+                            <div class="list-container">
+                                <ul id="synonyms-list" class="selection-list">
+                                    <!-- Các nhóm từ đồng nghĩa sẽ được nạp bằng JavaScript -->
+                                </ul>
+                            </div>
+                            <div class="button-group">
+                                <button id="new-synonym-group" class="btn secondary">Tạo nhóm mới</button>
+                                <button id="delete-synonym-group" class="btn danger">Xóa nhóm</button>
+                            </div>
+                        </div>
+                        <div class="right-panel">
+                            <h3>Từ vựng trong nhóm</h3>
+                            <div class="list-container">
+                                <ul id="synonym-words-list" class="selection-list">
+                                    <!-- Các từ trong nhóm đồng nghĩa sẽ được nạp bằng JavaScript -->
+                                </ul>
+                            </div>
+                            <div class="button-group">
+                                <button id="add-to-synonym" class="btn primary">Thêm từ vào nhóm</button>
+                                <button id="remove-from-synonym" class="btn danger">Xóa từ khỏi nhóm</button>
+                                <button id="auto-update-synonyms" class="btn secondary">Tự động cập nhật</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="synonyms-message" class="message-area"></div>
+                </div>
+            </div>
+
+            <!-- Tab cài đặt -->
+            <div class="tab-pane" id="settings">
+                <div class="settings-section">
+                    <h3>Cài đặt ứng dụng</h3>
+                    <div class="settings-group">
+                        <div class="setting-item">
+                            <label for="voice-select">Giọng đọc:</label>
+                            <select id="voice-select" class="select-dropdown">
+                                <!-- Danh sách giọng đọc sẽ được nạp bằng JavaScript -->
+                            </select>
+                        </div>
+                        <div class="setting-item">
+                            <label for="speech-speed">Tốc độ đọc:</label>
+                            <input type="range" id="speech-speed" min="0.5" max="2" step="0.1" value="1">
+                            <span id="speed-value">1x</span>
+                        </div>
+                        <div class="setting-item">
+                            <label for="theme-select">Giao diện:</label>
+                            <select id="theme-select" class="select-dropdown">
+                                <option value="light">Sáng</option>
+                                <option value="dark">Tối</option>
+                                <option value="auto">Tự động</option>
+                            </select>
+                        </div>
+                        <div class="setting-item">
+                            <label for="background-color">Màu nền:</label>
+                            <input type="color" id="background-color" value="#f5f5f5">
+                        </div>
+                        <div class="setting-item">
+                            <label>Hình nền:</label>
+                            <div class="background-preview" id="background-preview"></div>
+                            <input type="file" id="background-upload" accept="image/*" style="display: none;">
+                            <button id="select-background" class="btn secondary">Chọn ảnh</button>
+                            <button id="remove-background" class="btn danger">Xóa ảnh</button>
+                        </div>
+                    </div>
+                    <div class="button-group">
+                        <button id="save-settings" class="btn primary">Lưu cài đặt</button>
+                        <button id="reset-settings" class="btn secondary">Khôi phục mặc định</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab Đám Mây (Cloud) - Sửa đổi để loại bỏ Firebase và ID phiên -->
+            <div id="cloud" class="tab-pane">
+                <div class="tab-header">
+                    <h2>Đồng bộ và Sao lưu dữ liệu</h2>
+                    <div class="connection-status">
+                        <span>Trạng thái: </span>
+                        <span id="cloud-connection-status" class="online">Đã kết nối</span>
+                    </div>
+                </div>
+
+                <div class="tab-content">
+                    <!-- GitHub Gist Sync Panel -->
+                    <div id="github-gist-panel" class="sync-panel">
+                        <h3>Đồng bộ với GitHub Gist</h3>
+                        <p>GitHub Gist cho phép bạn lưu trữ dữ liệu từ vựng trực tuyến và truy cập từ bất kỳ thiết bị nào.</p>
+                        
+                        <div id="github-auth-info">
+                            <div class="auth-status">
+                                <span>Trạng thái xác thực: </span>
+                                <span id="github-auth-status">Chưa xác thực</span>
+                            </div>
+                            <div class="gist-info">
+                                <span>Gist ID: </span>
+                                <span id="github-gist-id">Chưa có</span>
+                            </div>
+                        </div>
+                        
+                        <div class="button-group">
+                            <button id="github-auth-btn" class="action-btn">Xác thực GitHub</button>
+                            <button id="github-list-gists-btn" class="action-btn">Xem danh sách Gist</button>
+                        </div>
+                        
+                        <div class="button-group">
+                            <button id="github-create-gist-btn" class="action-btn success">Tạo Gist mới</button>
+                            <button id="github-update-gist-btn" class="action-btn">Cập nhật lên Gist</button>
+                            <button id="github-load-gist-btn" class="action-btn">Tải từ Gist</button>
+                        </div>
+                    </div>
+                    
+                    <!-- Panel sao lưu dữ liệu -->
+                    <div class="backup-section">
+                        <h3>Sao lưu và khôi phục</h3>
+                        <div class="button-group">
+                            <button id="btn-backup-download" class="action-btn secondary">Tải xuống dữ liệu</button>
+                            <button id="btn-backup-restore" class="action-btn secondary">Khôi phục từ file</button>
+                            <input type="file" id="backup-file-input" accept=".json" style="display: none;">
+                        </div>
+                    </div>
+                    
+                    <!-- Thông tin dữ liệu -->
+                    <div class="data-statistics">
+                        <h3>Thông tin dữ liệu</h3>
+                        <div class="stats-row">
+                            <div class="stat-item">
+                                <div class="stat-value" id="cloud-vocab-count">0</div>
+                                <div class="stat-label">Từ vựng</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value" id="cloud-topic-count">0</div>
+                                <div class="stat-label">Chủ đề</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value" id="cloud-synonym-count">0</div>
+                                <div class="stat-label">Nhóm từ đồng nghĩa</div>
+                            </div>
+                        </div>
+                        <div class="last-updated">
+                            <div>Cập nhật lần cuối:</div>
+                            <div id="cloud-last-update">Chưa có dữ liệu</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Hướng dẫn sử dụng -->
+                    <div class="help-section">
+                        <h3>Hướng dẫn sử dụng</h3>
+                        <div class="help-item">
+                            <h4>Đồng bộ với GitHub Gist:</h4>
+                            <p>Xác thực với GitHub và tạo/cập nhật Gist để lưu trữ dữ liệu từ vựng của bạn. Bạn có thể truy cập dữ liệu này từ bất kỳ thiết bị nào bằng cách nhập cùng token và Gist ID.</p>
+                        </div>
+                        <div class="help-item">
+                            <h4>Sao lưu dữ liệu:</h4>
+                            <p>Sử dụng nút "Tải xuống dữ liệu" để tạo bản sao lưu cục bộ dưới dạng file JSON.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dialogs -->
+    <div id="quiz-details-dialog" class="dialog">
+        <div class="dialog-content">
+            <span class="close-dialog">&times;</span>
+            <h2>Chi tiết kết quả kiểm tra</h2>
+            <div id="quiz-details-content"></div>
+            <button id="close-quiz-details" class="btn primary">Đóng</button>
+        </div>
+    </div>
+
+    <div id="word-selector-dialog" class="dialog">
+        <div class="dialog-content">
+            <span class="close-dialog">&times;</span>
+            <h2 id="selector-dialog-title">Chọn từ vựng</h2>
+            <div class="word-selector-container">
+                <div class="search-box">
+                    <input type="text" id="search-words" placeholder="Tìm kiếm từ...">
+                </div>
+                <div class="word-list-container">
+                    <table id="word-selector-table">
+                        <thead>
+                            <tr>
+                                <th width="10%">Chọn</th>
+                                <th width="45%">Tiếng Anh</th>
+                                <th width="45%">Tiếng Việt</th>
+                            </tr>
+                        </thead>
+                        <tbody id="word-selector-body">
+                            <!-- Danh sách từ sẽ được nạp bằng JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+                <div class="selector-controls">
+                    <button id="select-all" class="btn secondary">Chọn tất cả</button>
+                    <button id="deselect-all" class="btn secondary">Bỏ chọn tất cả</button>
+                    <button id="save-selection" class="btn primary">Lưu thay đổi</button>
+                    <button id="cancel-selection" class="btn danger">Hủy</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Thông báo -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <!-- Copy dữ liệu từ vựng -->
+    <script id="vocabulary-data" type="application/json">
+        <!-- Dữ liệu từ vựng sẽ được nhúng bởi script -->
+    </script>
+
+    <script src="app.js"></script>
+</body>
+</html>
