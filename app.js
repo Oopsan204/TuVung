@@ -768,59 +768,54 @@ function initLearnTab() {
     learnedWordsCount = 0;
 
     // Event listeners cho các nút chuyển đổi kiểu luyện tập
-    document.getElementById('task-dictation').addEventListener('click', function () {
+    var btnDictation = document.getElementById('task-dictation');
+    if (btnDictation) btnDictation.addEventListener('click', function () {
         switchLearnTask('dictation-task');
     });
-
-    document.getElementById('task-translation').addEventListener('click', function () {
+    var btnTranslation = document.getElementById('task-translation');
+    if (btnTranslation) btnTranslation.addEventListener('click', function () {
         switchLearnTask('translation-task');
     });
 
-    document.getElementById('task-flashcard').addEventListener('click', function () {
-        switchLearnTask('quick-flashcard-task');
-    });
-
     // Event listeners cho task nghe viết từ
-    document.getElementById('dictation-speak').addEventListener('click', speakCurrentWord);
-    document.getElementById('check-dictation').addEventListener('click', checkDictation);
-    document.getElementById('dictation-next').addEventListener('click', nextWord);
+    var btnDictSpeak = document.getElementById('dictation-speak');
+    if (btnDictSpeak) btnDictSpeak.addEventListener('click', speakCurrentWord);
+    var btnCheckDict = document.getElementById('check-dictation');
+    if (btnCheckDict) btnCheckDict.addEventListener('click', checkDictation);
+    var btnDictNext = document.getElementById('dictation-next');
+    if (btnDictNext) btnDictNext.addEventListener('click', nextWord);
 
     // Task xem nghĩa viết từ
-    document.getElementById('check-word').addEventListener('click', checkTranslationTask);
-    document.getElementById('translation-next').addEventListener('click', nextWordTranslationTask);
-
-    // Task flashcard nhanh
-    document.getElementById('quick-card-flip').addEventListener('click', flipQuickCard);
-    document.getElementById('quick-card-prev').addEventListener('click', prevQuickCard);
-    document.getElementById('quick-card-next').addEventListener('click', nextQuickCard);
-    document.getElementById('quick-card-speak').addEventListener('click', speakCurrentWord);
-
-    // Thêm sự kiện click cho flashcard
-    document.getElementById('quick-card-front').addEventListener('click', flipQuickCard);
-    document.getElementById('quick-card-back').addEventListener('click', flipQuickCard);
+    var btnCheckWord = document.getElementById('check-word');
+    if (btnCheckWord) btnCheckWord.addEventListener('click', checkTranslationTask);
+    var btnTransNext = document.getElementById('translation-next');
+    if (btnTransNext) btnTransNext.addEventListener('click', nextWordTranslationTask);
 
     // Sự kiện khi thay đổi gói từ vựng
-    document.getElementById('learn-package').addEventListener('change', changeLearnPackage);
+    var selLearnPkg = document.getElementById('learn-package');
+    if (selLearnPkg) selLearnPkg.addEventListener('change', changeLearnPackage);
 
     // Thêm sự kiện phím tắt cho phần học từ mới
     document.addEventListener('keydown', handleLearnKeydown);
 
     // Sự kiện cho nút phát âm từ hiện tại
-    document.getElementById('word-speak').addEventListener('click', speakCurrentWord);
+    var btnWordSpeak = document.getElementById('word-speak');
+    if (btnWordSpeak) btnWordSpeak.addEventListener('click', speakCurrentWord);
 
     // Thêm sự kiện Enter khi nhập từ
-    document.getElementById('dictation-input').addEventListener('keypress', function (e) {
+    var inpDict = document.getElementById('dictation-input');
+    if (inpDict) inpDict.addEventListener('keypress', function (e) {
         if (e.key === 'Enter') checkDictation();
     });
 
-    document.getElementById('word-input').addEventListener('keypress', function (e) {
+    var inpWord = document.getElementById('word-input');
+    if (inpWord) inpWord.addEventListener('keypress', function (e) {
         if (e.key === 'Enter') checkTranslationTask();
     });
 
     // Hiển thị từ đầu tiên
     showCurrentWord();
     showTranslationTask();
-    showQuickCard();
     updateLearnProgress();
 }
 
@@ -833,7 +828,6 @@ function switchLearnTask(taskId) {
     let btnId;
     if (taskId === 'dictation-task') btnId = 'task-dictation';
     else if (taskId === 'translation-task') btnId = 'task-translation';
-    else if (taskId === 'quick-flashcard-task') btnId = 'task-flashcard';
 
     document.getElementById(btnId).classList.add('active');
     document.getElementById(taskId).classList.add('active-task');
@@ -843,8 +837,6 @@ function switchLearnTask(taskId) {
         prepareNewWord();
     } else if (taskId === 'translation-task') {
         showTranslationTask();
-    } else if (taskId === 'quick-flashcard-task') {
-        showQuickCard();
     }
 }
 
@@ -873,7 +865,6 @@ function changeLearnPackage() {
     // Hiển thị từ đầu tiên
     showCurrentWord();
     showTranslationTask();
-    showQuickCard();
     updateLearnProgress();
 }
 
@@ -890,8 +881,10 @@ function showCurrentWord() {
     const word = wordList[currentIndex];
 
     // Hiển thị từ hiện tại trong thẻ từ vựng chính
-    document.getElementById('current-word').textContent = word;
-    document.getElementById('word-translation').textContent = vocabulary[word] || '';
+    var elCurrentWord = document.getElementById('current-word');
+    if (elCurrentWord) elCurrentWord.textContent = word;
+    var elWordTranslation = document.getElementById('word-translation');
+    if (elWordTranslation) elWordTranslation.textContent = vocabulary[word] || '';
 
     // Reset các input và kết quả
     prepareNewWord();
@@ -901,7 +894,6 @@ function nextWord() {
     currentIndex = (currentIndex + 1) % wordList.length;
     showCurrentWord();
     showTranslationTask();
-    showQuickCard();
     updateLearnProgress();
 }
 
@@ -1037,13 +1029,8 @@ function handleLearnKeydown(e) {
         nextWord();
     } else if (e.code === 'ArrowLeft') {
         prevQuickCard();
-    } else if (e.code === 'Space') {
-        // Nếu đang ở flashcard nhanh thì lật thẻ
-        if (document.getElementById('quick-flashcard-task').classList.contains('active-task')) {
-            flipQuickCard();
-            e.preventDefault(); // Ngăn chặn cuộn trang
-        }
     }
+    // Đã loại bỏ phần xử lý phím Space cho quick-flashcard-task vì phần này không còn tồn tại
 }
 
 // Đánh dấu từ đã học
@@ -1080,11 +1067,9 @@ function showWord() {
     // Reset input và kết quả cho dictation
     document.getElementById('dictation-input').value = '';
     document.getElementById('dictation-result').textContent = '';
-}
-
-function showTranslation() {
-    const word = wordList[currentIndex];
-    document.getElementById('word-translation').textContent = vocabulary[word];
+    // Hiển thị từ cho task nghe viết từ
+    document.getElementById('dictation-input').value = '';
+    document.getElementById('dictation-result').textContent = '';
 }
 
 // Chức năng Quiz (kiểm tra từ vựng)
