@@ -1029,8 +1029,9 @@ function handleLearnKeydown(e) {
         nextWord();
     } else if (e.code === 'ArrowLeft') {
         prevQuickCard();
+    } else if (e.ctrlKey) {
+        speakCurrentWord();
     }
-    // Đã loại bỏ phần xử lý phím Space cho quick-flashcard-task vì phần này không còn tồn tại
 }
 
 // Đánh dấu từ đã học
@@ -1686,6 +1687,9 @@ function createNewTopic() {
     // Cập nhật giao diện
     loadTopicsList();
     showToast(`Đã tạo chủ đề "${topicName}" thành công!`, 'success');
+    // Cập nhật dropdown chủ đề ở các nơi
+    populateTopicDropdown();
+    populateApiTopicDropdown();
 }
 
 function deleteTopic() {
@@ -1707,6 +1711,9 @@ function deleteTopic() {
     loadTopicsList();
     document.getElementById('topic-words-list').innerHTML = '';
     showToast(`Đã xóa chủ đề "${topicName}"!`, 'success');
+    // Cập nhật dropdown chủ đề ở các nơi
+    populateTopicDropdown();
+    populateApiTopicDropdown();
 }
 
 function showAddToTopicDialog() {
