@@ -2329,6 +2329,9 @@ function initDictionaryTab() {
 
     // Thêm sự kiện cho nút thêm từ mới
     document.getElementById('dict-add-new-word').addEventListener('click', addNewWordToDictionary);
+
+    // Gọi khi khởi tạo tab từ điển
+    populateTopicDropdown();
 }
 
 function loadDictionaryWords() {
@@ -2427,6 +2430,8 @@ function clearDictionarySearch() {
 function addNewWordToDictionary() {
     const engWord = document.getElementById('dict-word-english').value.trim().toLowerCase();
     const vietWord = document.getElementById('dict-word-vietnamese').value.trim();
+    const topicSelect = document.getElementById('dict-topic-select');
+    const topic = topicSelect ? topicSelect.value : '';
 
     if (engWord === '' || vietWord === '') {
         showToast('Vui lòng nhập đầy đủ từ tiếng Anh và nghĩa tiếng Việt!', 'warning');
@@ -2442,12 +2447,20 @@ function addNewWordToDictionary() {
     // Thêm từ mới hoặc cập nhật nghĩa
     vocabulary[engWord] = vietWord;
 
+    // Thêm vào chủ đề nếu chọn
+    if (topic) {
+        if (!wordTopics[topic]) wordTopics[topic] = [];
+        if (!wordTopics[topic].includes(engWord)) wordTopics[topic].push(engWord);
+        saveTopics();
+    }
+
     // Cập nhật danh sách từ vựng
     loadDictionaryWords();
 
     // Xóa trống ô input
     document.getElementById('dict-word-english').value = '';
     document.getElementById('dict-word-vietnamese').value = '';
+    if (topicSelect) topicSelect.value = '';
 
     // Lưu từ vựng
     saveVocabulary();
@@ -2459,25 +2472,38 @@ function addNewWordToDictionary() {
     }
 }
 
-function speakWord(word) {
+async function speakWord(word) {
+    // Ưu tiên phát âm qua Free Dictionary API nếu có
+    try {
+        const apiUrl = `https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(word)}`;
+        const res = await fetch(apiUrl);
+        if (res.ok) {
+            const data = await res.json();
+            if (Array.isArray(data) && data[0] && data[0].phonetics) {
+                // Tìm audio đầu tiên hợp lệ
+                const audioObj = data[0].phonetics.find(p => p.audio);
+                if (audioObj && audioObj.audio) {
+                    const audio = new Audio(audioObj.audio);
+                    audio.play();
+                    return;
+                }
+            }
+        }
+    } catch (e) { /* Bỏ qua lỗi, fallback */ }
+    // Nếu không có audio, fallback về speechSynthesis
     if ('speechSynthesis' in window) {
         const utter = new SpeechSynthesisUtterance(word);
         utter.lang = 'en-US';
-
-        // Sử dụng voice đã chọn trong cài đặt (nếu có)
         const selectedVoice = localStorage.getItem('selectedVoice');
         if (selectedVoice) {
             const voices = window.speechSynthesis.getVoices();
             const voice = voices.find(v => v.name === selectedVoice);
             if (voice) utter.voice = voice;
         }
-
-        // Sử dụng tốc độ đọc từ cài đặt (nếu có)
         const speechRate = localStorage.getItem('speechRate');
         if (speechRate) {
             utter.rate = parseFloat(speechRate);
         }
-
         window.speechSynthesis.speak(utter);
     }
 }
@@ -2537,6 +2563,7 @@ function showApiLookupResult(result) {
     const btnAdd = document.getElementById('add-api-word-btn');
     const vnBox = document.getElementById('api-vn-meaning-box');
     const vnInput = document.getElementById('api-vn-meaning');
+    const topicSelect = document.getElementById('api-topic-select');
     if (!result) {
         box.style.display = 'block';
         content.innerHTML = '<span style="color:red">Không tìm thấy từ trong từ điển!</span>';
@@ -2552,14 +2579,22 @@ function showApiLookupResult(result) {
     btnAdd.style.display = 'inline-block';
     if (vnBox) vnBox.style.display = 'block';
     if (vnInput) vnInput.value = '';
+    if (topicSelect) populateApiTopicDropdown();
     btnAdd.onclick = function() {
         const vnMeaning = vnInput ? vnInput.value.trim() : '';
+        const topic = topicSelect ? topicSelect.value : '';
         if (!vnMeaning) {
             showToast('Vui lòng nhập nghĩa tiếng Việt ngắn gọn!', 'warning');
             if (vnInput) vnInput.focus();
             return;
         }
         vocabulary[result.word.toLowerCase()] = vnMeaning;
+        // Thêm vào chủ đề nếu chọn
+        if (topic) {
+            if (!wordTopics[topic]) wordTopics[topic] = [];
+            if (!wordTopics[topic].includes(result.word.toLowerCase())) wordTopics[topic].push(result.word.toLowerCase());
+            saveTopics();
+        }
         saveVocabulary();
         loadDictionaryWords();
         box.style.display = 'none';
@@ -2829,3 +2864,112 @@ window.onload = function () {
         });
     });
 };
+
+function populateTopicDropdown() {
+    var select = document.getElementById('dict-topic-select');
+    if (!select) return;
+    // Xóa các option cũ, giữ lại option đầu tiên
+    select.innerHTML = '<option value="">--Chọn chủ đề--</option>';
+    for (const topic in wordTopics) {
+        var opt = document.createElement('option');
+        opt.value = topic;
+        opt.textContent = topic;
+        select.appendChild(opt);
+    }
+}
+
+function addNewWordToDictionary() {
+    const engWord = document.getElementById('dict-word-english').value.trim().toLowerCase();
+    const vietWord = document.getElementById('dict-word-vietnamese').value.trim();
+    const topicSelect = document.getElementById('dict-topic-select');
+    const topic = topicSelect ? topicSelect.value : '';
+    if (engWord === '' || vietWord === '') {
+        showToast('Vui lòng nhập đầy đủ từ tiếng Anh và nghĩa tiếng Việt!', 'warning');
+        return;
+    }
+    // Kiểm tra từ đã tồn tại chưa
+    if (vocabulary[engWord]) {
+        const confirmOverwrite = confirm(`Từ "${engWord}" đã tồn tại với nghĩa "${vocabulary[engWord]}". Bạn có muốn cập nhật nghĩa mới không?`);
+        if (!confirmOverwrite) return;
+    }
+    // Thêm từ mới hoặc cập nhật nghĩa
+    vocabulary[engWord] = vietWord;
+    // Thêm vào chủ đề nếu chọn
+    if (topic) {
+        if (!wordTopics[topic]) wordTopics[topic] = [];
+        if (!wordTopics[topic].includes(engWord)) wordTopics[topic].push(engWord);
+        saveTopics();
+    }
+    // Cập nhật danh sách từ vựng
+    loadDictionaryWords();
+    // Xóa trống ô input
+    document.getElementById('dict-word-english').value = '';
+    document.getElementById('dict-word-vietnamese').value = '';
+    if (topicSelect) topicSelect.value = '';
+    // Lưu từ vựng
+    saveVocabulary();
+    showToast(`Đã ${vocabulary[engWord] ? 'cập nhật' : 'thêm'} từ "${engWord}" thành công!`, 'success');
+    // Cập nhật wordList cho phần học từ
+    if (!wordList.includes(engWord)) {
+        wordList.push(engWord);
+    }
+}
+
+function populateApiTopicDropdown() {
+    var select = document.getElementById('api-topic-select');
+    if (!select) return;
+    select.innerHTML = '<option value="">--Chọn chủ đề--</option>';
+    for (const topic in wordTopics) {
+        var opt = document.createElement('option');
+        opt.value = topic;
+        opt.textContent = topic;
+        select.appendChild(opt);
+    }
+}
+
+// Gọi hàm này khi hiển thị kết quả tra cứu API
+function showApiLookupResult(result) {
+    const box = document.getElementById('api-lookup-result');
+    const content = document.getElementById('api-lookup-content');
+    const btnAdd = document.getElementById('add-api-word-btn');
+    const vnBox = document.getElementById('api-vn-meaning-box');
+    const vnInput = document.getElementById('api-vn-meaning');
+    const topicSelect = document.getElementById('api-topic-select');
+    if (!result) {
+        box.style.display = 'block';
+        content.innerHTML = '<span style="color:red">Không tìm thấy từ trong từ điển!</span>';
+        btnAdd.style.display = 'none';
+        if (vnBox) vnBox.style.display = 'none';
+        return;
+    }
+    let html = `<b>Từ:</b> <span>${result.word}</span><br>`;
+    if(result.phonetic) html += `<b>Phát âm:</b> <span>${result.phonetic}</span><br>`;
+    html += `<b>Định nghĩa (EN):</b> <span>${result.meaning}</span><br>`;
+    if(result.example) html += `<b>Ví dụ:</b> <span>${result.example}</span><br>`;
+    content.innerHTML = html;
+    btnAdd.style.display = 'inline-block';
+    if (vnBox) vnBox.style.display = 'block';
+    if (vnInput) vnInput.value = '';
+    if (topicSelect) populateApiTopicDropdown();
+    btnAdd.onclick = function() {
+        const vnMeaning = vnInput ? vnInput.value.trim() : '';
+        const topic = topicSelect ? topicSelect.value : '';
+        if (!vnMeaning) {
+            showToast('Vui lòng nhập nghĩa tiếng Việt ngắn gọn!', 'warning');
+            if (vnInput) vnInput.focus();
+            return;
+        }
+        vocabulary[result.word.toLowerCase()] = vnMeaning;
+        // Thêm vào chủ đề nếu chọn
+        if (topic) {
+            if (!wordTopics[topic]) wordTopics[topic] = [];
+            if (!wordTopics[topic].includes(result.word.toLowerCase())) wordTopics[topic].push(result.word.toLowerCase());
+            saveTopics();
+        }
+        saveVocabulary();
+        loadDictionaryWords();
+        box.style.display = 'none';
+        showToast('Đã thêm từ vào từ vựng!', 'success');
+    };
+    box.style.display = 'block';
+}
