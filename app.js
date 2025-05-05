@@ -3,6 +3,7 @@ let vocabulary = {};
 let wordPackages = {};
 let wordTopics = {};
 let wordSynonyms = {};
+let wordExamples = {}; // Thêm đối tượng để lưu trữ ví dụ câu cho từng từ
 
 // Kiểm tra trạng thái kết nối
 let isOnline = navigator.onLine;
@@ -15,7 +16,7 @@ let gistId = '';
 function saveGitHubCredentials(token, id) {
     if (token) localStorage.setItem('githubToken', token);
     if (id) localStorage.setItem('gistId', id);
-    
+
     githubToken = token || githubToken;
     gistId = id || gistId;
 }
@@ -31,7 +32,7 @@ function loadGitHubCredentials() {
 async function authenticateGitHub() {
     const token = prompt('Nhập GitHub Personal Access Token của bạn:', githubToken);
     if (!token) return false;
-    
+
     try {
         // Kiểm tra xem token có hợp lệ không bằng cách thử liệt kê các gist
         const response = await fetch('https://api.github.com/gists', {
@@ -39,11 +40,11 @@ async function authenticateGitHub() {
                 'Authorization': `token ${token}`
             }
         });
-        
+
         if (!response.ok) {
             throw new Error('Token không hợp lệ hoặc không có quyền truy cập Gist');
         }
-        
+
         // Lưu token nếu xác thực thành công
         saveGitHubCredentials(token, null);
         showToast('Xác thực GitHub thành công!', 'success');
@@ -61,7 +62,7 @@ async function createVocabularyGist() {
         const authenticated = await authenticateGitHub();
         if (!authenticated) return null;
     }
-    
+
     try {
         // Chuẩn bị dữ liệu để tạo Gist
         const data = {
@@ -88,7 +89,7 @@ async function createVocabularyGist() {
                 }
             }
         };
-        
+
         // Gọi API để tạo Gist
         const response = await fetch('https://api.github.com/gists', {
             method: 'POST',
@@ -98,14 +99,14 @@ async function createVocabularyGist() {
             },
             body: JSON.stringify(data)
         });
-        
+
         if (!response.ok) {
             throw new Error('Không thể tạo Gist');
         }
-        
+
         const result = await response.json();
         const newGistId = result.id;
-        
+
         // Lưu ID của Gist vừa tạo
         saveGitHubCredentials(null, newGistId);
         showToast('Đã tạo Gist mới thành công!', 'success');
@@ -124,7 +125,7 @@ async function updateVocabularyGist() {
         const authenticated = await authenticateGitHub();
         if (!authenticated) return false;
     }
-    
+
     if (!gistId) {
         const useExisting = confirm('Bạn chưa chọn Gist để lưu dữ liệu. Bạn có muốn nhập ID Gist không?');
         if (useExisting) {
@@ -137,7 +138,7 @@ async function updateVocabularyGist() {
             if (!newId) return false;
         }
     }
-    
+
     try {
         // Chuẩn bị dữ liệu để cập nhật
         const data = {
@@ -166,7 +167,7 @@ async function updateVocabularyGist() {
                 }
             }
         };
-        
+
         // Gọi API để cập nhật Gist
         const response = await fetch(`https://api.github.com/gists/${gistId}`, {
             method: 'PATCH',
@@ -176,11 +177,11 @@ async function updateVocabularyGist() {
             },
             body: JSON.stringify(data)
         });
-        
+
         if (!response.ok) {
             throw new Error('Không thể cập nhật Gist');
         }
-        
+
         showToast('Đã cập nhật dữ liệu lên GitHub Gist!', 'success');
         return true;
     } catch (error) {
@@ -197,7 +198,7 @@ async function loadFromGist() {
         const authenticated = await authenticateGitHub();
         if (!authenticated) return false;
     }
-    
+
     // Kiểm tra Gist ID
     let gistToLoad = gistId;
     if (!gistToLoad) {
@@ -206,7 +207,7 @@ async function loadFromGist() {
         if (!id) return false;
         gistToLoad = id;
     }
-    
+
     try {
         // Gọi API để lấy Gist
         const response = await fetch(`https://api.github.com/gists/${gistToLoad}`, {
@@ -214,16 +215,16 @@ async function loadFromGist() {
                 'Authorization': `token ${githubToken}`
             }
         });
-        
+
         if (!response.ok) {
             throw new Error('Không thể tải dữ liệu từ Gist');
         }
-        
+
         const gistData = await response.json();
-        
+
         // Kiểm tra và tải các file dữ liệu
         let dataLoaded = false;
-        
+
         if (gistData.files['vocabulary_data.json']) {
             try {
                 const vocabContent = JSON.parse(gistData.files['vocabulary_data.json'].content);
@@ -233,7 +234,7 @@ async function loadFromGist() {
                 console.error('Lỗi parsing vocabulary_data.json:', e);
             }
         }
-        
+
         if (gistData.files['word_packages.json']) {
             try {
                 const packagesContent = JSON.parse(gistData.files['word_packages.json'].content);
@@ -242,7 +243,7 @@ async function loadFromGist() {
                 console.error('Lỗi parsing word_packages.json:', e);
             }
         }
-        
+
         if (gistData.files['word_topics.json']) {
             try {
                 const topicsContent = JSON.parse(gistData.files['word_topics.json'].content);
@@ -251,7 +252,7 @@ async function loadFromGist() {
                 console.error('Lỗi parsing word_topics.json:', e);
             }
         }
-        
+
         if (gistData.files['word_synonyms.json']) {
             try {
                 const synonymsContent = JSON.parse(gistData.files['word_synonyms.json'].content);
@@ -260,14 +261,14 @@ async function loadFromGist() {
                 console.error('Lỗi parsing word_synonyms.json:', e);
             }
         }
-        
+
         if (dataLoaded) {
             // Lưu Gist ID nếu tải thành công
             saveGitHubCredentials(null, gistToLoad);
-            
+
             // Lưu dữ liệu vào localStorage
             saveAllDataToLocalStorage();
-            
+
             // Cập nhật giao diện
             refreshAllViews();
             showToast('Đã tải dữ liệu từ GitHub Gist thành công!', 'success');
@@ -289,7 +290,7 @@ async function listUserGists() {
         const authenticated = await authenticateGitHub();
         if (!authenticated) return null;
     }
-    
+
     try {
         // Gọi API để lấy danh sách Gist
         const response = await fetch('https://api.github.com/gists', {
@@ -297,13 +298,13 @@ async function listUserGists() {
                 'Authorization': `token ${githubToken}`
             }
         });
-        
+
         if (!response.ok) {
             throw new Error('Không thể tải danh sách Gist');
         }
-        
+
         const gists = await response.json();
-        
+
         // Lọc ra các Gist có thể chứa dữ liệu từ vựng
         const vocabularyGists = gists.filter(gist => {
             return gist.files && (
@@ -312,7 +313,7 @@ async function listUserGists() {
                 gist.description.toLowerCase().includes('vocabulary')
             );
         });
-        
+
         return vocabularyGists;
     } catch (error) {
         console.error('Lỗi khi liệt kê Gist:', error);
@@ -328,7 +329,7 @@ async function showGistSelector() {
         showToast('Không tìm thấy Gist nào. Hãy tạo Gist mới!', 'warning');
         return null;
     }
-    
+
     // Tạo dialog chọn Gist
     let html = `<div id="gist-selector" class="dialog">
         <div class="dialog-content">
@@ -344,7 +345,7 @@ async function showGistSelector() {
                         </tr>
                     </thead>
                     <tbody>`;
-    
+
     gists.forEach(gist => {
         const updated = new Date(gist.updated_at).toLocaleString();
         html += `
@@ -356,50 +357,50 @@ async function showGistSelector() {
                 </td>
             </tr>`;
     });
-    
+
     html += `</tbody>
                 </table>
             </div>
             <button id="cancel-gist-selection" class="btn secondary">Hủy</button>
         </div>
     </div>`;
-    
+
     // Thêm dialog vào DOM
     const tempDiv = document.createElement('div');
     tempDiv.innerHTML = html;
     document.body.appendChild(tempDiv.firstChild);
-    
+
     // Hiển thị dialog
     const dialog = document.getElementById('gist-selector');
     dialog.style.display = 'block';
-    
+
     // Xử lý sự kiện
     return new Promise((resolve) => {
         // Xử lý khi chọn một Gist
         document.querySelectorAll('.select-gist').forEach(btn => {
-            btn.addEventListener('click', function() {
+            btn.addEventListener('click', function () {
                 const id = this.getAttribute('data-id');
                 dialog.style.display = 'none';
                 document.body.removeChild(dialog);
                 resolve(id);
             });
         });
-        
+
         // Xử lý khi đóng dialog
-        document.getElementById('close-gist-selector').addEventListener('click', function() {
+        document.getElementById('close-gist-selector').addEventListener('click', function () {
             dialog.style.display = 'none';
             document.body.removeChild(dialog);
             resolve(null);
         });
-        
-        document.getElementById('cancel-gist-selection').addEventListener('click', function() {
+
+        document.getElementById('cancel-gist-selection').addEventListener('click', function () {
             dialog.style.display = 'none';
             document.body.removeChild(dialog);
             resolve(null);
         });
-        
+
         // Đóng dialog khi click ra ngoài
-        window.addEventListener('click', function(event) {
+        window.addEventListener('click', function (event) {
             if (event.target === dialog) {
                 dialog.style.display = 'none';
                 document.body.removeChild(dialog);
@@ -410,10 +411,10 @@ async function showGistSelector() {
 }
 
 // Tải GitHub credentials khi khởi động
-window.addEventListener('DOMContentLoaded', function() {
+window.addEventListener('DOMContentLoaded', function () {
     // Tải token và gistId từ localStorage
     loadGitHubCredentials();
-    
+
     // Tự động điền token GitHub (chỉ dùng cho phát triển, xóa dòng này khi triển khai)
     if (!githubToken) {
         // Token đã được cài đặt trước (thay YOUR_TOKEN_HERE bằng token của bạn)
@@ -421,7 +422,7 @@ window.addEventListener('DOMContentLoaded', function() {
         saveGitHubCredentials(defaultToken, null);
         githubToken = defaultToken;
         console.log("Đã tự động thiết lập token GitHub");
-        
+
         // Sau khi thiết lập token, cập nhật hiển thị trạng thái
         setTimeout(() => {
             if (typeof updateGitHubAuthStatus === 'function') {
@@ -471,7 +472,7 @@ const VocabularyManager = {
             localStorage.setItem('wordPackages', JSON.stringify(this.data.wordPackages));
             localStorage.setItem('wordTopics', JSON.stringify(this.data.wordTopics));
             localStorage.setItem('wordSynonyms', JSON.stringify(this.data.wordSynonyms));
-            
+
             if (updateTimestamp) {
                 localStorage.setItem('lastUpdated', new Date().toISOString());
             }
@@ -518,7 +519,7 @@ const VocabularyManager = {
             try {
                 const path = basePath + filename;
                 const response = await fetch(path);
-                
+
                 if (response.ok) {
                     return await response.json();
                 }
@@ -528,7 +529,7 @@ const VocabularyManager = {
         }
         return null;
     },
-    
+
     // Tải tất cả dữ liệu từ các file
     async loadFromFiles() {
         try {
@@ -539,19 +540,19 @@ const VocabularyManager = {
                 this.loadJSONFile('word_topics.json'),
                 this.loadJSONFile('word_synonyms.json')
             ]);
-            
+
             if (vocab) this.data.vocabulary = vocab;
             if (packages) this.data.wordPackages = packages;
             if (topics) this.data.wordTopics = topics;
             if (synonyms) this.data.wordSynonyms = synonyms;
-            
+
             return Object.keys(this.data.vocabulary).length > 0;
         } catch (error) {
             console.error("Lỗi khi tải dữ liệu từ file:", error);
             return false;
         }
     },
-    
+
     // Tạo dữ liệu mẫu cơ bản
     createSampleData() {
         this.data.vocabulary = {
@@ -566,23 +567,23 @@ const VocabularyManager = {
             "bad": "xấu",
             "learn": "học"
         };
-        
+
         this.data.wordPackages = {
             "Cơ bản": ["hello", "goodbye", "thank you", "yes", "no", "please", "sorry"]
         };
-        
+
         this.data.wordTopics = {
             "Giao tiếp": ["hello", "goodbye", "thank you", "yes", "no", "please", "sorry"]
         };
-        
+
         this.data.wordSynonyms = {
             "good_group": ["good"],
             "bad_group": ["bad"]
         };
-        
+
         return true;
     },
-    
+
     // Tạo dữ liệu mẫu nâng cao
     createExtendedSampleData() {
         this.data.vocabulary = {
@@ -606,25 +607,25 @@ const VocabularyManager = {
             "language": "ngôn ngữ",
             "translate": "dịch"
         };
-        
+
         this.data.wordPackages = {
             "Cơ bản": ["hello", "goodbye", "thank you", "yes", "no", "please", "sorry"],
             "Học tập": ["learn", "english", "vietnamese", "vocabulary", "practice", "word", "meaning", "dictionary", "language", "translate"]
         };
-        
+
         this.data.wordTopics = {
             "Giao tiếp": ["hello", "goodbye", "thank you", "yes", "no", "please", "sorry"],
             "Giáo dục": ["learn", "english", "vietnamese", "vocabulary", "practice", "word", "meaning", "dictionary", "language", "translate"]
         };
-        
+
         this.data.wordSynonyms = {
             "good_group": ["good"],
             "bad_group": ["bad"]
         };
-        
+
         return true;
     },
-    
+
     // Phương thức chính để tải dữ liệu
     async load() {
         // Bước 1: Thử tải từ localStorage
@@ -633,7 +634,7 @@ const VocabularyManager = {
             console.log("Đã tải dữ liệu từ localStorage:", Object.keys(this.data.vocabulary).length, "từ");
             return true;
         }
-        
+
         // Bước 2: Thử tải từ file
         console.log("Không có dữ liệu trong localStorage, đang tải từ file...");
         const fileLoaded = await this.loadFromFiles();
@@ -642,7 +643,7 @@ const VocabularyManager = {
             this.saveToLocalStorage();
             return true;
         }
-        
+
         // Bước 3: Tạo dữ liệu mẫu nếu không tải được
         console.log("Không thể tải dữ liệu, tạo dữ liệu mẫu...");
         this.createExtendedSampleData();
@@ -658,7 +659,7 @@ function updateGlobalVariables() {
     wordPackages = VocabularyManager.data.wordPackages;
     wordTopics = VocabularyManager.data.wordTopics;
     wordSynonyms = VocabularyManager.data.wordSynonyms;
-    
+
     window.vocabulary = vocabulary;
     window.wordPackages = wordPackages;
     window.wordTopics = wordTopics;
@@ -670,10 +671,21 @@ async function loadVocabulary() {
     try {
         await VocabularyManager.load();
         updateGlobalVariables();
-        
+
+        // Tải dữ liệu câu ví dụ từ localStorage
+        try {
+            const savedExamples = localStorage.getItem('wordExamples');
+            if (savedExamples) {
+                wordExamples = JSON.parse(savedExamples);
+            }
+        } catch (e) {
+            console.error("Lỗi khi tải dữ liệu câu ví dụ:", e);
+            wordExamples = {};
+        }
+
         // Hiển thị số lượng từ vựng đã tải
         console.log("Tổng số từ vựng đã tải:", Object.keys(vocabulary).length);
-        
+
         // Khởi tạo các tab
         initLearnTab();
         initDictionaryTab();
@@ -683,7 +695,7 @@ async function loadVocabulary() {
         initSynonymsTab();
         initSettingsTab();
         initCloudTab();
-        
+
         showToast(`Đã tải ${Object.keys(vocabulary).length} từ vựng thành công!`, 'success');
     } catch (error) {
         console.error("Lỗi khi tải dữ liệu từ vựng:", error);
@@ -697,6 +709,7 @@ function saveAllDataToLocalStorage(updateTimestamp = true) {
     localStorage.setItem('wordPackages', JSON.stringify(wordPackages));
     localStorage.setItem('wordTopics', JSON.stringify(wordTopics));
     localStorage.setItem('wordSynonyms', JSON.stringify(wordSynonyms));
+    localStorage.setItem('wordExamples', JSON.stringify(wordExamples));
 
     if (updateTimestamp) {
         localStorage.setItem('lastUpdated', new Date().toISOString());
@@ -1446,8 +1459,27 @@ function showFlashcard() {
     document.getElementById('flashcard-word').textContent = word;
     document.getElementById('flashcard-translation').textContent = vocabulary[word] || '';
 
-    // Đặt ví dụ mẫu cho từ
-    const example = generateExample(word);
+    // Hiển thị câu ví dụ từ API đã lưu trước đó hoặc tạo câu ví dụ mẫu
+    let example = '';
+    if (wordExamples[word.toLowerCase()] && wordExamples[word.toLowerCase()].length > 0) {
+        // Lấy câu ví dụ thực tế từ API đã lưu trữ
+        example = wordExamples[word.toLowerCase()][0];
+
+        // Nếu có nhiều câu ví dụ, hiển thị câu ngẫu nhiên
+        if (wordExamples[word.toLowerCase()].length > 1) {
+            const randomIndex = Math.floor(Math.random() * wordExamples[word.toLowerCase()].length);
+            example = wordExamples[word.toLowerCase()][randomIndex];
+        }
+    } else {
+        // Không có ví dụ thực tế, tạo câu mẫu hoặc tải ví dụ từ API
+        example = generateExample(word);
+
+        // Nếu đang online, thử tìm câu ví dụ thực tế từ API
+        if (navigator.onLine) {
+            fetchExamplesForWord(word);
+        }
+    }
+
     document.getElementById('flashcard-example').textContent = example;
 
     // Cập nhật UI phản ánh trạng thái đã học hay chưa
@@ -2440,47 +2472,7 @@ function addNewWordToDictionary() {
 }
 
 async function speakWord(word) {
-    let played = false;
-    const timeout = setTimeout(() => {
-        if (!played) {
-            played = true;
-            fallbackSpeak(word);
-        }
-    }, 3000); // Giảm xuống 3 giây
-
-    try {
-        // Phương pháp 1: Sử dụng Free Dictionary API (ưu tiên)
-        const apiUrl = `https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(word)}`;
-        const res = await fetch(apiUrl);
-        if (res.ok) {
-            const data = await res.json();
-            if (Array.isArray(data) && data[0] && data[0].phonetics) {
-                const audioObj = data[0].phonetics.find(p => p.audio);
-                if (audioObj && audioObj.audio) {
-                    const audio = new Audio(audioObj.audio);
-                    audio.onplay = () => { played = true; clearTimeout(timeout); };
-                    audio.onended = () => { played = true; clearTimeout(timeout); };
-                    audio.onerror = () => { 
-                        if (!played) { 
-                            played = true; 
-                            clearTimeout(timeout); 
-                            // Chạy ResponsiveVoice nếu Free Dictionary API audio lỗi
-                            responsiveVoiceSpeak(word); 
-                        } 
-                    };
-                    audio.play();
-                    return;
-                }
-            }
-        }
-    } catch (e) { /* fallback to ResponsiveVoice */ }
-
-    // Nếu không phát được âm từ API, sử dụng ResponsiveVoice
-    if (!played) {
-        played = true;
-        clearTimeout(timeout);
-        responsiveVoiceSpeak(word);
-    }
+    fallbackSpeak(word);
 }
 
 // Cập nhật hàm speakCurrentWord cho tab học từ mới
@@ -2496,28 +2488,6 @@ async function speakFlashcardWord() {
     await speakWord(word);
 }
 
-// Hàm phát âm qua ResponsiveVoice (ưu tiên thứ hai)
-function responsiveVoiceSpeak(word) {
-    if (typeof responsiveVoice !== 'undefined' && responsiveVoice) {
-        // Lấy giọng đọc đã lưu trong localStorage
-        const savedVoice = localStorage.getItem('selectedVoice');
-        const speechRate = localStorage.getItem('speechRate') || 1;
-        
-        // Chọn giọng đọc phù hợp
-        let voiceName = "UK English Female";
-        if (savedVoice && savedVoice.includes("US")) {
-            voiceName = "US English Female";
-        }
-        
-        responsiveVoice.speak(word, voiceName, {
-            rate: parseFloat(speechRate),
-            pitch: 1,
-            onend: () => console.log(`ResponsiveVoice finished speaking: ${word}`)
-        });
-    } else {
-        fallbackSpeak(word); // Nếu ResponsiveVoice không có, dùng speechSynthesis
-    }
-}
 
 // Hàm phát âm bằng SpeechSynthesis API (phương pháp cuối)
 function fallbackSpeak(word) {
@@ -2565,23 +2535,39 @@ async function lookupWordFromAPI(word) {
         const data = await res.json();
         if (!Array.isArray(data) || !data[0]) return null;
         const entry = data[0];
+
         // Lấy nghĩa tiếng Anh đầu tiên
         let meaning = '';
-        let example = '';
+        let examples = [];
         let phonetic = entry.phonetic || '';
-        if (entry.meanings && entry.meanings[0]) {
-            const def = entry.meanings[0].definitions[0];
-            meaning = def.definition || '';
-            example = def.example || '';
+
+        // Lấy tất cả các ví dụ từ các định nghĩa khác nhau
+        if (entry.meanings && entry.meanings.length > 0) {
+            entry.meanings.forEach(meaningObj => {
+                if (meaningObj.definitions && meaningObj.definitions.length > 0) {
+                    meaningObj.definitions.forEach(def => {
+                        if (!meaning) meaning = def.definition || '';
+                        if (def.example) examples.push(def.example);
+                    });
+                }
+            });
         }
+
+        // Lưu các ví dụ này vào wordExamples nếu tìm thấy ít nhất một ví dụ
+        if (examples.length > 0) {
+            wordExamples[entry.word.toLowerCase()] = examples;
+            localStorage.setItem('wordExamples', JSON.stringify(wordExamples));
+        }
+
         return {
             word: entry.word,
             meaning,
             phonetic,
-            example,
+            examples,
             raw: entry
         };
     } catch (e) {
+        console.error("Lỗi khi tra cứu từ từ Free Dictionary API:", e);
         return null;
     }
 }
@@ -2602,15 +2588,21 @@ function showApiLookupResult(result) {
         return;
     }
     let html = `<b>Từ:</b> <span>${result.word}</span><br>`;
-    if(result.phonetic) html += `<b>Phát âm:</b> <span>${result.phonetic}</span><br>`;
+    if (result.phonetic) html += `<b>Phát âm:</b> <span>${result.phonetic}</span><br>`;
     html += `<b>Định nghĩa (EN):</b> <span>${result.meaning}</span><br>`;
-    if(result.example) html += `<b>Ví dụ:</b> <span>${result.example}</span><br>`;
+    if (result.examples && result.examples.length > 0) {
+        html += `<b>Ví dụ:</b><ul>`;
+        result.examples.forEach(example => {
+            html += `<li>${example}</li>`;
+        });
+        html += `</ul>`;
+    }
     content.innerHTML = html;
     btnAdd.style.display = 'inline-block';
     if (vnBox) vnBox.style.display = 'block';
     if (vnInput) vnInput.value = '';
     if (topicSelect) populateApiTopicDropdown();
-    btnAdd.onclick = function() {
+    btnAdd.onclick = function () {
         const vnMeaning = vnInput ? vnInput.value.trim() : '';
         const topic = topicSelect ? topicSelect.value : '';
         if (!vnMeaning) {
@@ -2782,7 +2774,7 @@ async function restoreFromBackup(data) {
 // Các event listeners cho GitHub Gist
 function setupGithubGistEventListeners() {
     // Nút xác thực GitHub
-    document.getElementById('github-auth-btn').addEventListener('click', async function() {
+    document.getElementById('github-auth-btn').addEventListener('click', async function () {
         const success = await authenticateGitHub();
         if (success) {
             updateGitHubAuthStatus();
@@ -2790,7 +2782,7 @@ function setupGithubGistEventListeners() {
     });
 
     // Nút liệt kê Gists
-    document.getElementById('github-list-gists-btn').addEventListener('click', async function() {
+    document.getElementById('github-list-gists-btn').addEventListener('click', async function () {
         const gistId = await showGistSelector();
         if (gistId) {
             saveGitHubCredentials(null, gistId);
@@ -2800,7 +2792,7 @@ function setupGithubGistEventListeners() {
     });
 
     // Nút tạo Gist mới
-    document.getElementById('github-create-gist-btn').addEventListener('click', async function() {
+    document.getElementById('github-create-gist-btn').addEventListener('click', async function () {
         const newGistId = await createVocabularyGist();
         if (newGistId) {
             showToast('Đã tạo Gist mới với ID: ' + newGistId, 'success');
@@ -2809,7 +2801,7 @@ function setupGithubGistEventListeners() {
     });
 
     // Nút cập nhật lên Gist
-    document.getElementById('github-update-gist-btn').addEventListener('click', async function() {
+    document.getElementById('github-update-gist-btn').addEventListener('click', async function () {
         const success = await updateVocabularyGist();
         if (success) {
             showToast('Đã cập nhật dữ liệu từ vựng lên Gist', 'success');
@@ -2817,7 +2809,7 @@ function setupGithubGistEventListeners() {
     });
 
     // Nút tải từ Gist
-    document.getElementById('github-load-gist-btn').addEventListener('click', async function() {
+    document.getElementById('github-load-gist-btn').addEventListener('click', async function () {
         const success = await loadFromGist();
         if (success) {
             showToast('Đã tải dữ liệu từ vựng từ Gist', 'success');
@@ -2830,14 +2822,14 @@ function setupGithubGistEventListeners() {
 function updateGitHubAuthStatus() {
     const authStatusElem = document.getElementById('github-auth-status');
     const gistIdElem = document.getElementById('github-gist-id');
-    
+
     // Tải thông tin xác thực
     const { githubToken, gistId } = loadGitHubCredentials();
-    
+
     if (githubToken) {
         authStatusElem.textContent = 'Đã xác thực';
         authStatusElem.className = 'authenticated';
-        
+
         if (gistId) {
             gistIdElem.textContent = gistId;
         } else {
@@ -2861,12 +2853,12 @@ function updateDataStatistics() {
 // Thêm vào hàm init
 function init() {
     // ...existing code...
-    
+
     // Setup GitHub Gist
     setupGithubGistEventListeners();
     updateGitHubAuthStatus();
     updateDataStatistics();
-    
+
     // ...existing code...
 }
 
@@ -2874,7 +2866,7 @@ function init() {
 window.onload = function () {
     setupTabs();
     loadVocabulary();
-    
+
     // Thêm khởi tạo các nút GitHub Gist
     setupGithubGistEventListeners();
     updateGitHubAuthStatus();
@@ -2973,15 +2965,21 @@ function showApiLookupResult(result) {
         return;
     }
     let html = `<b>Từ:</b> <span>${result.word}</span><br>`;
-    if(result.phonetic) html += `<b>Phát âm:</b> <span>${result.phonetic}</span><br>`;
+    if (result.phonetic) html += `<b>Phát âm:</b> <span>${result.phonetic}</span><br>`;
     html += `<b>Định nghĩa (EN):</b> <span>${result.meaning}</span><br>`;
-    if(result.example) html += `<b>Ví dụ:</b> <span>${result.example}</span><br>`;
+    if (result.examples && result.examples.length > 0) {
+        html += `<b>Ví dụ:</b><ul>`;
+        result.examples.forEach(example => {
+            html += `<li>${example}</li>`;
+        });
+        html += `</ul>`;
+    }
     content.innerHTML = html;
     btnAdd.style.display = 'inline-block';
     if (vnBox) vnBox.style.display = 'block';
     if (vnInput) vnInput.value = '';
     if (topicSelect) populateApiTopicDropdown();
-    btnAdd.onclick = function() {
+    btnAdd.onclick = function () {
         const vnMeaning = vnInput ? vnInput.value.trim() : '';
         const topic = topicSelect ? topicSelect.value : '';
         if (!vnMeaning) {
@@ -3002,4 +3000,25 @@ function showApiLookupResult(result) {
         showToast('Đã thêm từ vào từ vựng!', 'success');
     };
     box.style.display = 'block';
+}
+
+// Hàm tự động tìm câu ví dụ cho từ vựng từ API
+async function fetchExamplesForWord(word) {
+    try {
+        const result = await lookupWordFromAPI(word);
+        if (result && result.examples && result.examples.length > 0) {
+            // Đã tìm thấy ví dụ và lưu vào wordExamples trong hàm lookupWordFromAPI
+            console.log(`Tìm thấy ${result.examples.length} câu ví dụ cho từ "${word}"`);
+
+            // Cập nhật UI nếu từ đang hiển thị trong flashcard
+            if (flashcardWords[currentFlashcardIndex] === word) {
+                const example = result.examples[0]; // Lấy ví dụ đầu tiên
+                document.getElementById('flashcard-example').textContent = example;
+            }
+            return result.examples;
+        }
+    } catch (e) {
+        console.error("Lỗi khi tìm câu ví dụ cho từ:", e);
+    }
+    return null;
 }
