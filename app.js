@@ -909,30 +909,10 @@ function nextWordTranslationTask() {
     nextWord();
 }
 
-function speakCurrentWord() {
+async function speakCurrentWord() {
     if (wordList.length === 0) return;
     const word = wordList[currentIndex];
-
-    if ('speechSynthesis' in window) {
-        const utter = new SpeechSynthesisUtterance(word);
-        utter.lang = 'en-US';
-
-        // Sử dụng voice đã chọn trong cài đặt (nếu có)
-        const selectedVoice = localStorage.getItem('selectedVoice');
-        if (selectedVoice) {
-            const voices = window.speechSynthesis.getVoices();
-            const voice = voices.find(v => v.name === selectedVoice);
-            if (voice) utter.voice = voice;
-        }
-
-        // Sử dụng tốc độ đọc từ cài đặt (nếu có)
-        const speechRate = localStorage.getItem('speechRate');
-        if (speechRate) {
-            utter.rate = parseFloat(speechRate);
-        }
-
-        window.speechSynthesis.speak(utter);
-    }
+    await speakWord(word);
 }
 
 function checkDictation() {
@@ -1579,29 +1559,9 @@ function updateFlashcardProgress() {
     document.getElementById('learn-progress').style.width = `${percentage}%`;
 }
 
-function speakFlashcardWord() {
+async function speakFlashcardWord() {
     const word = flashcardWords[currentFlashcardIndex];
-
-    if ('speechSynthesis' in window) {
-        const utter = new SpeechSynthesisUtterance(word);
-        utter.lang = 'en-US';
-
-        // Sử dụng voice đã chọn trong cài đặt (nếu có)
-        const selectedVoice = localStorage.getItem('selectedVoice');
-        if (selectedVoice) {
-            const voices = window.speechSynthesis.getVoices();
-            const voice = voices.find(v => v.name === selectedVoice);
-            if (voice) utter.voice = voice;
-        }
-
-        // Sử dụng tốc độ đọc từ cài đặt (nếu có)
-        const speechRate = localStorage.getItem('speechRate');
-        if (speechRate) {
-            utter.rate = parseFloat(speechRate);
-        }
-
-        window.speechSynthesis.speak(utter);
-    }
+    await speakWord(word);
 }
 
 function toggleHint() {
@@ -2480,24 +2440,87 @@ function addNewWordToDictionary() {
 }
 
 async function speakWord(word) {
-    // Ưu tiên phát âm qua Free Dictionary API nếu có
+    let played = false;
+    const timeout = setTimeout(() => {
+        if (!played) {
+            played = true;
+            fallbackSpeak(word);
+        }
+    }, 3000); // Giảm xuống 3 giây
+
     try {
+        // Phương pháp 1: Sử dụng Free Dictionary API (ưu tiên)
         const apiUrl = `https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(word)}`;
         const res = await fetch(apiUrl);
         if (res.ok) {
             const data = await res.json();
             if (Array.isArray(data) && data[0] && data[0].phonetics) {
-                // Tìm audio đầu tiên hợp lệ
                 const audioObj = data[0].phonetics.find(p => p.audio);
                 if (audioObj && audioObj.audio) {
                     const audio = new Audio(audioObj.audio);
+                    audio.onplay = () => { played = true; clearTimeout(timeout); };
+                    audio.onended = () => { played = true; clearTimeout(timeout); };
+                    audio.onerror = () => { 
+                        if (!played) { 
+                            played = true; 
+                            clearTimeout(timeout); 
+                            // Chạy ResponsiveVoice nếu Free Dictionary API audio lỗi
+                            responsiveVoiceSpeak(word); 
+                        } 
+                    };
                     audio.play();
                     return;
                 }
             }
         }
-    } catch (e) { /* Bỏ qua lỗi, fallback */ }
-    // Nếu không có audio, fallback về speechSynthesis
+    } catch (e) { /* fallback to ResponsiveVoice */ }
+
+    // Nếu không phát được âm từ API, sử dụng ResponsiveVoice
+    if (!played) {
+        played = true;
+        clearTimeout(timeout);
+        responsiveVoiceSpeak(word);
+    }
+}
+
+// Cập nhật hàm speakCurrentWord cho tab học từ mới
+async function speakCurrentWord() {
+    if (wordList.length === 0) return;
+    const word = wordList[currentIndex];
+    await speakWord(word);
+}
+
+// Cập nhật hàm speakFlashcardWord cho tab thẻ ghi nhớ
+async function speakFlashcardWord() {
+    const word = flashcardWords[currentFlashcardIndex];
+    await speakWord(word);
+}
+
+// Hàm phát âm qua ResponsiveVoice (ưu tiên thứ hai)
+function responsiveVoiceSpeak(word) {
+    if (typeof responsiveVoice !== 'undefined' && responsiveVoice) {
+        // Lấy giọng đọc đã lưu trong localStorage
+        const savedVoice = localStorage.getItem('selectedVoice');
+        const speechRate = localStorage.getItem('speechRate') || 1;
+        
+        // Chọn giọng đọc phù hợp
+        let voiceName = "UK English Female";
+        if (savedVoice && savedVoice.includes("US")) {
+            voiceName = "US English Female";
+        }
+        
+        responsiveVoice.speak(word, voiceName, {
+            rate: parseFloat(speechRate),
+            pitch: 1,
+            onend: () => console.log(`ResponsiveVoice finished speaking: ${word}`)
+        });
+    } else {
+        fallbackSpeak(word); // Nếu ResponsiveVoice không có, dùng speechSynthesis
+    }
+}
+
+// Hàm phát âm bằng SpeechSynthesis API (phương pháp cuối)
+function fallbackSpeak(word) {
     if ('speechSynthesis' in window) {
         const utter = new SpeechSynthesisUtterance(word);
         utter.lang = 'en-US';
