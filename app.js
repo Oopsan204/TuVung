@@ -753,6 +753,8 @@ let wordList = [];
 let currentIndex = 0;
 
 // Chức năng học từ mới nâng cao
+let completionTask; // Biến toàn cục để lưu đối tượng completionTask
+
 function initLearnTab() {
     // Khởi tạo danh sách gói từ vựng cho phần học từ mới
     const packageSelect = document.getElementById('learn-package');
@@ -789,6 +791,10 @@ function initLearnTab() {
     if (btnTranslation) btnTranslation.addEventListener('click', function () {
         switchLearnTask('translation-task');
     });
+    var btnCompletion = document.getElementById('task-completion');
+    if (btnCompletion) btnCompletion.addEventListener('click', function () {
+        switchLearnTask('completion-task');
+    });
 
     // Event listeners cho task nghe viết từ
     var btnDictSpeak = document.getElementById('dictation-speak');
@@ -803,6 +809,9 @@ function initLearnTab() {
     if (btnCheckWord) btnCheckWord.addEventListener('click', checkTranslationTask);
     var btnTransNext = document.getElementById('translation-next');
     if (btnTransNext) btnTransNext.addEventListener('click', nextWordTranslationTask);
+
+    // Khởi tạo chức năng hoàn thành từ
+    completionTask = setupCompletionTask();
 
     // Sự kiện khi thay đổi gói từ vựng
     var selLearnPkg = document.getElementById('learn-package');
@@ -841,6 +850,7 @@ function switchLearnTask(taskId) {
     let btnId;
     if (taskId === 'dictation-task') btnId = 'task-dictation';
     else if (taskId === 'translation-task') btnId = 'task-translation';
+    else if (taskId === 'completion-task') btnId = 'task-completion';
 
     document.getElementById(btnId).classList.add('active');
     document.getElementById(taskId).classList.add('active-task');
@@ -850,6 +860,11 @@ function switchLearnTask(taskId) {
         prepareNewWord();
     } else if (taskId === 'translation-task') {
         showTranslationTask();
+    } else if (taskId === 'completion-task') {
+        // Đảm bảo initWords được gọi với dữ liệu hiện tại
+        if (completionTask && typeof completionTask.initWords === 'function') {
+            completionTask.initWords(wordList);
+        }
     }
 }
 
@@ -878,6 +893,12 @@ function changeLearnPackage() {
     // Hiển thị từ đầu tiên
     showCurrentWord();
     showTranslationTask();
+    
+    // Cập nhật dữ liệu cho chức năng hoàn thành từ
+    if (completionTask && typeof completionTask.initWords === 'function') {
+        completionTask.initWords(wordList);
+    }
+    
     updateLearnProgress();
 }
 
@@ -3022,3 +3043,599 @@ async function fetchExamplesForWord(word) {
     }
     return null;
 }
+
+// Xử lý chức năng hoàn thành từ (Word Completion) - phiên bản cải tiến
+function setupCompletionTask() {
+    const completionTaskButton = document.getElementById('task-completion');
+    const completionSection = document.getElementById('completion-task');
+    const incompleteWordElement = document.getElementById('incomplete-word');
+    const wordHintTextElement = document.getElementById('word-hint-text');
+    const completionInput = document.getElementById('completion-input');
+    const checkCompletionButton = document.getElementById('check-completion');
+    const completionResultElement = document.getElementById('completion-result');
+    const nextCompletionButton = document.getElementById('completion-next');
+    
+    let currentWord = null;
+    let currentIncompleteWord = '';
+    let completionWords = [];
+    let currentWordIndex = 0;
+    
+    // Tạo từ không đầy đủ bằng cách thay thế một số chữ cái bằng dấu gạch dưới
+    function createIncompleteWord(word) {
+        if (!word) return '';
+        const wordLength = word.length;
+        let replacements = Math.floor(wordLength * 0.4); // Thay thế khoảng 40% chữ cái
+        if (replacements < 1) replacements = 1;
+        if (wordLength <= 3) replacements = 1; // Với từ ngắn, chỉ thay 1 chữ
+        
+        let indices = [];
+        let incompleteWord = word.split('');
+        
+        // Tạo mảng chỉ số ngẫu nhiên không trùng lặp để thay thế
+        while (indices.length < replacements && indices.length < wordLength) {
+            const randomIndex = Math.floor(Math.random() * wordLength);
+            if (!indices.includes(randomIndex)) {
+                indices.push(randomIndex);
+                incompleteWord[randomIndex] = '_';
+            }
+        }
+        
+        return incompleteWord.join('');
+    }
+    
+    // Khởi tạo danh sách từ vựng cho nhiệm vụ hoàn thành từ
+    function initCompletionWords(words) {
+        if (!Array.isArray(words)) {
+            // Nếu words không phải mảng, chuyển đổi từ object
+            completionWords = Object.keys(words).map(word => ({ english: word, vietnamese: words[word] }));
+        } else {
+            completionWords = [...words];
+        }
+        
+        if (completionWords.length === 0) {
+            console.error("Không có từ vựng để hoàn thành");
+            return;
+        }
+        
+        shuffleArray(completionWords);
+        currentWordIndex = 0;
+        showNextCompletionWord();
+    }
+    
+    // Hiển thị từ tiếp theo cho nhiệm vụ hoàn thành từ
+    function showNextCompletionWord() {
+        // Reset các giá trị
+        completionInput.value = '';
+        completionResultElement.innerHTML = '';
+        completionResultElement.className = 'result-box';
+        
+        // Hiển thị từ tiếp theo nếu còn
+        if (currentWordIndex < completionWords.length) {
+            currentWord = completionWords[currentWordIndex];
+            
+            // Kiểm tra cấu trúc của currentWord
+            let englishWord, vietnameseWord;
+            if (typeof currentWord === 'string') {
+                englishWord = currentWord;
+                vietnameseWord = vocabulary[currentWord] || '';
+            } else if (currentWord.english && currentWord.vietnamese) {
+                englishWord = currentWord.english;
+                vietnameseWord = currentWord.vietnamese;
+            } else {
+                console.error("Định dạng từ vựng không hợp lệ:", currentWord);
+                currentWordIndex++;
+                showNextCompletionWord();
+                return;
+            }
+            
+            currentIncompleteWord = createIncompleteWord(englishWord);
+            
+            incompleteWordElement.textContent = currentIncompleteWord;
+            wordHintTextElement.textContent = vietnameseWord;
+            
+            // Cho phép kiểm tra và đi tiếp
+            checkCompletionButton.disabled = false;
+            nextCompletionButton.disabled = false;
+            
+            // Cập nhật tiến trình
+            if (typeof updateLearningProgress === 'function') {
+                updateLearningProgress();
+            }
+            
+            currentWordIndex++;
+        } else {
+            // Nếu đã học hết tất cả từ
+            incompleteWordElement.textContent = "Đã hoàn thành";
+            wordHintTextElement.textContent = "Bạn đã hoàn thành tất cả các từ";
+            checkCompletionButton.disabled = true;
+            nextCompletionButton.disabled = true;
+            
+            // Thông báo hoàn thành
+            showToast("Chúc mừng! Bạn đã hoàn thành bài tập", "success");
+        }
+    }
+    
+    // Kiểm tra từ người dùng nhập
+    function checkCompletionWord() {
+        if (!currentWord) return;
+        
+        const userInput = completionInput.value.trim().toLowerCase();
+        
+        // Lấy từ đúng dựa trên cấu trúc của currentWord
+        let correctAnswer;
+        if (typeof currentWord === 'string') {
+            correctAnswer = currentWord.toLowerCase();
+        } else if (currentWord.english) {
+            correctAnswer = currentWord.english.toLowerCase();
+        } else {
+            console.error("Không thể xác định từ đúng để kiểm tra");
+            return;
+        }
+        
+        // Lấy nghĩa để hiển thị
+        let meaning;
+        if (typeof currentWord === 'string') {
+            meaning = vocabulary[currentWord] || '';
+        } else if (currentWord.vietnamese) {
+            meaning = currentWord.vietnamese;
+        }
+        
+        if (userInput === correctAnswer) {
+            // Đúng
+            completionResultElement.innerHTML = `
+                <p>Chính xác! "${correctAnswer}" có nghĩa là "${meaning}".</p>
+            `;
+            completionResultElement.className = 'result-box correct';
+            
+            // Đánh dấu từ đã học
+            if (typeof markWordAsLearned === 'function') {
+                markWordAsLearned();
+            }
+            
+            if (typeof playCorrectSound === 'function') {
+                playCorrectSound();
+            }
+            
+        } else {
+            // Sai
+            completionResultElement.innerHTML = `
+                <p>Chưa chính xác. Từ đúng là "${correctAnswer}".</p>
+            `;
+            completionResultElement.className = 'result-box incorrect';
+            
+            if (typeof playIncorrectSound === 'function') {
+                playIncorrectSound();
+            }
+        }
+    }
+    
+    // Sự kiện khi nhấp vào nút kiểm tra
+    checkCompletionButton.addEventListener('click', checkCompletionWord);
+    
+    // Sự kiện khi nhấp Enter trong ô nhập
+    completionInput.addEventListener('keyup', (e) => {
+        if (e.key === 'Enter') {
+            checkCompletionWord();
+        }
+    });
+    
+    // Sự kiện khi nhấp vào nút từ tiếp theo
+    nextCompletionButton.addEventListener('click', showNextCompletionWord);
+    
+    // Thêm sự kiện cho nút chọn nhiệm vụ
+    completionTaskButton.addEventListener('click', () => {
+        // Chuyển đổi trạng thái active của các nút
+        document.querySelectorAll('.task-btn').forEach(btn => btn.classList.remove('active'));
+        completionTaskButton.classList.add('active');
+        
+        // Ẩn tất cả các phần và hiển thị phần nhiệm vụ hoàn thành từ
+        document.querySelectorAll('.practice-section').forEach(section => {
+            section.classList.remove('active-task');
+        });
+        completionSection.classList.add('active-task');
+    });
+    
+    // Trả về đối tượng chức năng để có thể sử dụng từ bên ngoài
+    return {
+        initWords: initCompletionWords
+    };
+}
+
+// Đảm bảo có hàm initializeVocabularyLearning để tích hợp được với hệ thống
+function initializeVocabularyLearning(words) {
+    wordList = Array.isArray(words) ? words.map(w => w.english || w) : Object.keys(words);
+    shuffleArray(wordList);
+    currentIndex = 0;
+    learnedWordsCount = 0;
+    showCurrentWord();
+    updateLearnProgress();
+}
+
+// Đảm bảo có hàm cập nhật tiến độ học tập
+function updateLearnProgress() {
+    if (wordList.length === 0) return;
+
+    const percentage = Math.round((learnedWordsCount / wordList.length) * 100) || 0;
+
+    const progressElement = document.getElementById('learn-word-count');
+    if (progressElement) {
+        progressElement.textContent =
+            `Từ ${currentIndex + 1}/${wordList.length} - Đã học: ${learnedWordsCount} (${percentage}%)`;
+    }
+
+    const progressBar = document.getElementById('learning-progress');
+    if (progressBar) {
+        progressBar.style.width = `${percentage}%`;
+    }
+}
+
+// Mã JavaScript cho việc chuyển đổi giữa các nhiệm vụ học từ mới
+document.getElementById('task-dictation').addEventListener('click', function() {
+    // Chuyển đổi trạng thái active của các nút
+    document.querySelectorAll('.task-btn').forEach(btn => btn.classList.remove('active'));
+    this.classList.add('active');
+    
+    // Ẩn tất cả các phần và hiển thị phần dictation
+    document.querySelectorAll('.practice-section').forEach(section => {
+        section.classList.remove('active-task');
+    });
+    document.getElementById('dictation-task').classList.add('active-task');
+});
+
+document.getElementById('task-translation').addEventListener('click', function() {
+    // Chuyển đổi trạng thái active của các nút
+    document.querySelectorAll('.task-btn').forEach(btn => btn.classList.remove('active'));
+    this.classList.add('active');
+    
+    // Ẩn tất cả các phần và hiển thị phần dịch
+    document.querySelectorAll('.practice-section').forEach(section => {
+        section.classList.remove('active-task');
+    });
+    document.getElementById('translation-task').classList.add('active-task');
+});
+
+// Thiết lập task nghe viết từ
+function setupDictationTask() {
+    const dictationInput = document.getElementById('dictation-input');
+    const dictationResult = document.getElementById('dictation-result');
+    const dictationNextButton = document.getElementById('dictation-next');
+    const dictationSpeakButton = document.getElementById('dictation-speak');
+    const checkDictationButton = document.getElementById('check-dictation');
+    
+    let dictationWords = [];
+    let currentDictationIndex = 0;
+    
+    // Khởi tạo danh sách từ vựng cho nhiệm vụ nghe viết
+    function initDictationWords(words) {
+        dictationWords = [...words];
+        shuffleArray(dictationWords);
+        currentDictationIndex = 0;
+        showNextDictationWord();
+    }
+    
+    // Hiển thị từ tiếp theo cho nhiệm vụ nghe viết
+    function showNextDictationWord() {
+        // Reset các giá trị
+        dictationInput.value = '';
+        dictationResult.innerHTML = '';
+        dictationResult.className = 'result-box';
+        
+        updateLearningProgress();
+    }
+    
+    // Sự kiện khi nhấp vào nút phát âm
+    dictationSpeakButton.addEventListener('click', async function() {
+        if (dictationWords.length > 0 && currentDictationIndex < dictationWords.length) {
+            await speakWord(dictationWords[currentDictationIndex]);
+        }
+    });
+    
+    // Sự kiện khi nhấp vào nút kiểm tra
+    checkDictationButton.addEventListener('click', function() {
+        checkDictation();
+    });
+    
+    // Sự kiện khi nhấp vào nút từ tiếp theo
+    dictationNextButton.addEventListener('click', function() {
+        currentDictationIndex++;
+        if (currentDictationIndex >= dictationWords.length) {
+            currentDictationIndex = 0;
+        }
+        showNextDictationWord();
+    });
+    
+    // Sự kiện khi nhấp Enter trong ô nhập
+    dictationInput.addEventListener('keyup', function(e) {
+        if (e.key === 'Enter') {
+            checkDictation();
+        }
+    });
+    
+    return {
+        initWords: initDictationWords
+    };
+}
+
+// Thiết lập task xem nghĩa viết từ
+function setupTranslationTask() {
+    const wordInput = document.getElementById('word-input');
+    const wordResult = document.getElementById('word-result');
+    const translationNextButton = document.getElementById('translation-next');
+    const meaningTextElement = document.getElementById('meaning-text');
+    const checkWordButton = document.getElementById('check-word');
+    
+    let translationWords = [];
+    let currentTranslationIndex = 0;
+    
+    // Khởi tạo danh sách từ vựng cho nhiệm vụ dịch
+    function initTranslationWords(words) {
+        translationWords = [...words];
+        shuffleArray(translationWords);
+        currentTranslationIndex = 0;
+        showNextTranslationWord();
+    }
+    
+    // Hiển thị từ tiếp theo cho nhiệm vụ dịch
+    function showNextTranslationWord() {
+        // Reset các giá trị
+        wordInput.value = '';
+        wordResult.innerHTML = '';
+        wordResult.className = 'result-box';
+        
+        // Hiển thị nghĩa tiếng Việt
+        if (translationWords.length > 0 && currentTranslationIndex < translationWords.length) {
+            meaningTextElement.textContent = vocabulary[translationWords[currentTranslationIndex]] || '';
+        }
+        
+        updateLearningProgress();
+    }
+    
+    // Sự kiện khi nhấp vào nút kiểm tra
+    checkWordButton.addEventListener('click', function() {
+        checkTranslationWord();
+    });
+    
+    // Sự kiện khi nhấp vào nút từ tiếp theo
+    translationNextButton.addEventListener('click', function() {
+        currentTranslationIndex++;
+        if (currentTranslationIndex >= translationWords.length) {
+            currentTranslationIndex = 0;
+        }
+        showNextTranslationWord();
+    });
+    
+    // Sự kiện khi nhấp Enter trong ô nhập
+    wordInput.addEventListener('keyup', function(e) {
+        if (e.key === 'Enter') {
+            checkTranslationWord();
+        }
+    });
+    
+    // Kiểm tra từ người dùng nhập vào
+    function checkTranslationWord() {
+        const userInput = wordInput.value.trim().toLowerCase();
+        
+        if (userInput === '') {
+            wordResult.textContent = 'Vui lòng nhập từ tiếng Anh!';
+            wordResult.className = 'result-box';
+            return;
+        }
+        
+        const correctWord = translationWords[currentTranslationIndex].toLowerCase();
+        
+        if (userInput === correctWord) {
+            wordResult.innerHTML = `<p>✓ Chính xác!</p>`;
+            wordResult.className = 'result-box correct';
+            playCorrectSound();
+            markWordAsLearned();
+        } else {
+            wordResult.innerHTML = `<p>✗ Không chính xác! Từ đúng là "${translationWords[currentTranslationIndex]}".</p>`;
+            wordResult.className = 'result-box incorrect';
+            playIncorrectSound();
+        }
+        
+        updateLearningProgress();
+    }
+    
+    return {
+        initWords: initTranslationWords
+    };
+}
+
+// Hàm phát âm thanh khi trả lời đúng
+function playCorrectSound() {
+    // Đơn giản hóa, không thật sự phát âm thanh
+    console.log("Correct answer!");
+}
+
+// Hàm phát âm thanh khi trả lời sai
+function playIncorrectSound() {
+    // Đơn giản hóa, không thật sự phát âm thanh
+    console.log("Incorrect answer!");
+}
+
+// Thêm sự kiện cho nút hoàn thành từ
+document.getElementById('task-completion').addEventListener('click', function() {
+    // Chuyển đổi trạng thái active của các nút
+    document.querySelectorAll('.task-btn').forEach(btn => btn.classList.remove('active'));
+    this.classList.add('active');
+    
+    // Ẩn tất cả các phần và hiển thị phần hoàn thành từ
+    document.querySelectorAll('.practice-section').forEach(section => {
+        section.classList.remove('active-task');
+    });
+    document.getElementById('completion-task').classList.add('active-task');
+});
+
+// Thiết lập task nghe viết từ
+function setupDictationTask() {
+    const dictationInput = document.getElementById('dictation-input');
+    const dictationResult = document.getElementById('dictation-result');
+    const dictationNextButton = document.getElementById('dictation-next');
+    const dictationSpeakButton = document.getElementById('dictation-speak');
+    const checkDictationButton = document.getElementById('check-dictation');
+    
+    let dictationWords = [];
+    let currentDictationIndex = 0;
+    
+    // Khởi tạo danh sách từ vựng cho nhiệm vụ nghe viết
+    function initDictationWords(words) {
+        dictationWords = [...words];
+        shuffleArray(dictationWords);
+        currentDictationIndex = 0;
+        showNextDictationWord();
+    }
+    
+    // Hiển thị từ tiếp theo cho nhiệm vụ nghe viết
+    function showNextDictationWord() {
+        // Reset các giá trị
+        dictationInput.value = '';
+        dictationResult.innerHTML = '';
+        dictationResult.className = 'result-box';
+        
+        updateLearningProgress();
+    }
+    
+    // Sự kiện khi nhấp vào nút phát âm
+    dictationSpeakButton.addEventListener('click', async function() {
+        if (dictationWords.length > 0 && currentDictationIndex < dictationWords.length) {
+            await speakWord(dictationWords[currentDictationIndex]);
+        }
+    });
+    
+    // Sự kiện khi nhấp vào nút kiểm tra
+    checkDictationButton.addEventListener('click', function() {
+        checkDictation();
+    });
+    
+    // Sự kiện khi nhấp vào nút từ tiếp theo
+    dictationNextButton.addEventListener('click', function() {
+        currentDictationIndex++;
+        if (currentDictationIndex >= dictationWords.length) {
+            currentDictationIndex = 0;
+        }
+        showNextDictationWord();
+    });
+    
+    // Sự kiện khi nhấp Enter trong ô nhập
+    dictationInput.addEventListener('keyup', function(e) {
+        if (e.key === 'Enter') {
+            checkDictation();
+        }
+    });
+    
+    return {
+        initWords: initDictationWords
+    };
+}
+
+// Thiết lập task xem nghĩa viết từ
+function setupTranslationTask() {
+    const wordInput = document.getElementById('word-input');
+    const wordResult = document.getElementById('word-result');
+    const translationNextButton = document.getElementById('translation-next');
+    const meaningTextElement = document.getElementById('meaning-text');
+    const checkWordButton = document.getElementById('check-word');
+    
+    let translationWords = [];
+    let currentTranslationIndex = 0;
+    
+    // Khởi tạo danh sách từ vựng cho nhiệm vụ dịch
+    function initTranslationWords(words) {
+        translationWords = [...words];
+        shuffleArray(translationWords);
+        currentTranslationIndex = 0;
+        showNextTranslationWord();
+    }
+    
+    // Hiển thị từ tiếp theo cho nhiệm vụ dịch
+    function showNextTranslationWord() {
+        // Reset các giá trị
+        wordInput.value = '';
+        wordResult.innerHTML = '';
+        wordResult.className = 'result-box';
+        
+        // Hiển thị nghĩa tiếng Việt
+        if (translationWords.length > 0 && currentTranslationIndex < translationWords.length) {
+            meaningTextElement.textContent = vocabulary[translationWords[currentTranslationIndex]] || '';
+        }
+        
+        updateLearningProgress();
+    }
+    
+    // Sự kiện khi nhấp vào nút kiểm tra
+    checkWordButton.addEventListener('click', function() {
+        checkTranslationWord();
+    });
+    
+    // Sự kiện khi nhấp vào nút từ tiếp theo
+    translationNextButton.addEventListener('click', function() {
+        currentTranslationIndex++;
+        if (currentTranslationIndex >= translationWords.length) {
+            currentTranslationIndex = 0;
+        }
+        showNextTranslationWord();
+    });
+    
+    // Sự kiện khi nhấp Enter trong ô nhập
+    wordInput.addEventListener('keyup', function(e) {
+        if (e.key === 'Enter') {
+            checkTranslationWord();
+        }
+    });
+    
+    // Kiểm tra từ người dùng nhập vào
+    function checkTranslationWord() {
+        const userInput = wordInput.value.trim().toLowerCase();
+        
+        if (userInput === '') {
+            wordResult.textContent = 'Vui lòng nhập từ tiếng Anh!';
+            wordResult.className = 'result-box';
+            return;
+        }
+        
+        const correctWord = translationWords[currentTranslationIndex].toLowerCase();
+        
+        if (userInput === correctWord) {
+            wordResult.innerHTML = `<p>✓ Chính xác!</p>`;
+            wordResult.className = 'result-box correct';
+            playCorrectSound();
+            markWordAsLearned();
+        } else {
+            wordResult.innerHTML = `<p>✗ Không chính xác! Từ đúng là "${translationWords[currentTranslationIndex]}".</p>`;
+            wordResult.className = 'result-box incorrect';
+            playIncorrectSound();
+        }
+        
+        updateLearningProgress();
+    }
+    
+    return {
+        initWords: initTranslationWords
+    };
+}
+
+// Hàm phát âm thanh khi trả lời đúng
+function playCorrectSound() {
+    // Đơn giản hóa, không thật sự phát âm thanh
+    console.log("Correct answer!");
+}
+
+// Hàm phát âm thanh khi trả lời sai
+function playIncorrectSound() {
+    // Đơn giản hóa, không thật sự phát âm thanh
+    console.log("Incorrect answer!");
+}
+
+// Thêm sự kiện cho nút hoàn thành từ
+document.getElementById('task-completion').addEventListener('click', function() {
+    // Chuyển đổi trạng thái active của các nút
+    document.querySelectorAll('.task-btn').forEach(btn => btn.classList.remove('active'));
+    this.classList.add('active');
+    
+    // Ẩn tất cả các phần và hiển thị phần hoàn thành từ
+    document.querySelectorAll('.practice-section').forEach(section => {
+        section.classList.remove('active-task');
+    });
+    document.getElementById('completion-task').classList.add('active-task');
+});

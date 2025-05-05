@@ -60,6 +60,9 @@
                             <button id="task-translation" class="btn task-btn">
                                 <i class="fas fa-language"></i> Xem nghĩa viết từ
                             </button>
+                            <button id="task-completion" class="btn task-btn">
+                                <i class="fas fa-puzzle-piece"></i> Hoàn thành từ
+                            </button>
                         </div>
                     </div>
 
@@ -104,6 +107,31 @@
                             </button>
                             <div class="practice-tip">
                                 <i class="fas fa-lightbulb"></i> Mẹo: Nhấn phím Enter sau khi nhập để kiểm tra từ
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Task 3: Hoàn thành từ -->
+                    <div class="practice-section" id="completion-task">
+                        <div class="practice-card">
+                            <h4><i class="fas fa-puzzle-piece"></i> Hoàn thành từ</h4>
+                            <div class="word-completion-display">
+                                <p>Điền chữ cái còn thiếu để hoàn thành từ:</p>
+                                <h3 id="incomplete-word">h_ll_</h3>
+                            </div>
+                            <div class="word-hint">
+                                <p>Gợi ý: <span id="word-hint-text">Xin chào</span></p>
+                            </div>
+                            <div class="input-group">
+                                <input type="text" id="completion-input" placeholder="Nhập từ đầy đủ...">
+                                <button id="check-completion" class="btn primary">Kiểm tra</button>
+                            </div>
+                            <div id="completion-result" class="result-box"></div>
+                            <button id="completion-next" class="btn secondary btn-next">
+                                Từ tiếp theo <i class="fas fa-arrow-right"></i>
+                            </button>
+                            <div class="practice-tip">
+                                <i class="fas fa-lightbulb"></i> Mẹo: Nhập từ đầy đủ không có dấu gạch dưới
                             </div>
                         </div>
                     </div>

@@ -1871,3 +1871,44 @@ body.dark-theme .google-auth:hover {
         margin: 5px;
     }
 }
+
+/* Phần CSS cho nhiệm vụ hoàn thành từ */
+#incomplete-word {
+    font-size: 2rem;
+    letter-spacing: 4px;
+    margin: 20px 0;
+    font-weight: bold;
+    color: #007bff;
+}
+
+.word-completion-display {
+    text-align: center;
+    margin: 15px 0;
+}
+
+.word-hint {
+    background-color: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 6px;
+    padding: 10px;
+    margin: 10px 0;
+}
+
+.word-hint p {
+    margin: 0;
+    font-weight: bold;
+}
+
+#word-hint-text {
+    font-style: italic;
+    color: #6c757d;
+}
+
+/* Hiển thị chỉ một task luyện tập tại một thời điểm */
+.practice-section {
+    display: none;
+}
+
+.practice-section.active-task {
+    display: block;
+}
