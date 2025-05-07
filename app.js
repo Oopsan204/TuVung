@@ -2690,6 +2690,90 @@ async function fetchExamplesForWord(word) {
     return null;
 }
 
+// Hàm tra cứu từ điển từ API
+async function lookupWordFromAPI(word) {
+    if (!word) return null;
+    const trimmedWord = word.trim().toLowerCase();
+    
+    try {
+        // Kiểm tra nếu đã có trong cache
+        if (wordExamples[trimmedWord]) {
+            return {
+                word: trimmedWord,
+                phonetic: '',
+                meaning: vocabulary[trimmedWord] || '',
+                examples: wordExamples[trimmedWord]
+            };
+        }
+        
+        // Sử dụng Free Dictionary API
+        const response = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(trimmedWord)}`);
+        
+        if (!response.ok) {
+            console.error(`API trả về lỗi: ${response.status}`);
+            return null;
+        }
+        
+        const data = await response.json();
+        
+        if (!data || !data[0]) {
+            return null;
+        }
+        
+        const entry = data[0];
+        
+        // Lấy phát âm
+        let phonetic = '';
+        if (entry.phonetics && entry.phonetics.length > 0) {
+            for (const p of entry.phonetics) {
+                if (p.text) {
+                    phonetic = p.text;
+                    break;
+                }
+            }
+        }
+        
+        // Lấy định nghĩa
+        let meaning = '';
+        let examples = [];
+        
+        if (entry.meanings && entry.meanings.length > 0) {
+            // Lấy định nghĩa đầu tiên
+            const firstMeaning = entry.meanings[0];
+            if (firstMeaning.definitions && firstMeaning.definitions.length > 0) {
+                meaning = firstMeaning.definitions[0].definition || '';
+                
+                // Tìm các ví dụ
+                for (const m of entry.meanings) {
+                    if (m.definitions) {
+                        for (const def of m.definitions) {
+                            if (def.example) {
+                                examples.push(def.example);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Lưu các ví dụ tìm được vào bộ nhớ
+        if (examples.length > 0) {
+            wordExamples[trimmedWord] = examples;
+            localStorage.setItem('wordExamples', JSON.stringify(wordExamples));
+        }
+        
+        return {
+            word: entry.word || trimmedWord,
+            phonetic: phonetic,
+            meaning: meaning,
+            examples: examples
+        };
+    } catch (error) {
+        console.error('Lỗi khi tra cứu từ điển:', error);
+        return null;
+    }
+}
+
 // Xử lý chức năng hoàn thành từ (Word Completion) - phiên bản cải tiến
 function setupCompletionTask() {
     const completionTaskButton = document.getElementById('task-completion');
@@ -3080,7 +3164,7 @@ function setupTranslationTask() {
             playIncorrectSound();
         }
         
-        updateLearningProgress();
+        updateLearnProgress();
     }
     
     return {
@@ -3100,68 +3184,111 @@ function playIncorrectSound() {
     console.log("Incorrect answer!");
 }
 
-// Thêm sự kiện cho nút hoàn thành từ
-document.getElementById('task-completion').addEventListener('click', function() {
-    // Chuyển đổi trạng thái active của các nút
-    document.querySelectorAll('.task-btn').forEach(btn => btn.classList.remove('active'));
-    this.classList.add('active');
+// Hàm phát âm từ với khả năng tùy chỉnh giọng nói và tốc độ
+async function speakWord(word) {
+    if (!word) return;
     
-    // Ẩn tất cả các phần và hiển thị phần hoàn thành từ
-    document.querySelectorAll('.practice-section').forEach(section => {
-        section.classList.remove('active-task');
-    });
-    document.getElementById('completion-task').classList.add('active-task');
-});
-
-function initCloudTab() {
-    const cloudTab = document.getElementById('cloud');
-    if (!cloudTab) {
-        console.error('Cloud tab element not found!');
-        return;
+    // Dừng tất cả đang phát âm
+    window.speechSynthesis.cancel();
+    
+    // Tạo đối tượng phát âm
+    const utterance = new SpeechSynthesisUtterance(word);
+    
+    // Thiết lập tốc độ phát âm
+    const savedSpeed = localStorage.getItem('speechRate') || '1';
+    utterance.rate = parseFloat(savedSpeed);
+    
+    // Thiết lập giọng đọc
+    const voices = window.speechSynthesis.getVoices();
+    const savedVoiceName = localStorage.getItem('selectedVoice');
+    
+    if (savedVoiceName && voices.length > 0) {
+        const selectedVoice = voices.find(voice => voice.name === savedVoiceName);
+        if (selectedVoice) {
+            utterance.voice = selectedVoice;
+        }
     }
+    
+    // Sự kiện khi phát âm kết thúc
+    return new Promise((resolve) => {
+        utterance.onend = () => {
+            resolve();
+        };
+        
+        // Sự kiện khi có lỗi
+        utterance.onerror = (event) => {
+            console.error('Lỗi phát âm:', event.error);
+            resolve();
+        };
+        
+        // Phát âm
+        window.speechSynthesis.speak(utterance);
+        
+        // Đề phòng lỗi không gọi onend
+        setTimeout(() => {
+            resolve();
+        }, 5000); // Timeout sau 5 giây
+    });
+}
 
-    // Cập nhật thống kê dữ liệu
-    updateDataStatistics();
+// Khởi tạo tab đồng bộ đám mây
+function initCloudTab() {
+    try {
+        // Cập nhật trạng thái kết nối
+        document.getElementById('cloud-connection-status').textContent = isOnline ? 'Đã kết nối' : 'Mất kết nối';
+        document.getElementById('cloud-connection-status').className = isOnline ? 'online' : 'offline';
+        
+        // Tải thông tin xác thực GitHub Gist
+        loadGitHubCredentials();
+        updateGitHubAuthStatus();
+        
+        // Cập nhật thống kê dữ liệu
+        updateDataStatistics();
+        
+        // Đăng ký các sự kiện mạng
+        window.addEventListener('online', function() {
+            isOnline = true;
+            document.getElementById('cloud-connection-status').textContent = 'Đã kết nối';
+            document.getElementById('cloud-connection-status').className = 'online';
+            showToast('Đã kết nối lại mạng!', 'success');
+        });
+        
+        window.addEventListener('offline', function() {
+            isOnline = false;
+            document.getElementById('cloud-connection-status').textContent = 'Mất kết nối';
+            document.getElementById('cloud-connection-status').className = 'offline';
+            showToast('Đã mất kết nối mạng!', 'warning');
+        });
+        
+        // Khởi tạo chức năng sao lưu và khôi phục
+        initBackupFeatures();
+        
+        console.log('Cloud tab initialized successfully.');
+        return true;
+    } catch (error) {
+        console.error('Error initializing cloud tab:', error);
+        return false;
+    }
+}
 
-    // Thêm các event listener cho các nút trong tab Cloud
-    document.getElementById('github-auth-btn').addEventListener('click', authenticateGitHub);
-    document.getElementById('github-list-gists-btn').addEventListener('click', listGists);
-    document.getElementById('github-create-gist-btn').addEventListener('click', createNewGist);
-    document.getElementById('github-update-gist-btn').addEventListener('click', updateVocabularyGist);
-    document.getElementById('github-load-gist-btn').addEventListener('click', loadFromGist);
+// Khởi tạo chức năng sao lưu và khôi phục
+function initBackupFeatures() {
+    // Nút tải xuống bản sao lưu
     document.getElementById('btn-backup-download').addEventListener('click', downloadBackupFile);
-    document.getElementById('btn-backup-restore').addEventListener('click', () => {
+    
+    // Nút khôi phục từ file
+    document.getElementById('btn-backup-restore').addEventListener('click', function() {
         document.getElementById('backup-file-input').click();
     });
-
-    // Lắng nghe sự kiện khi người dùng chọn file để khôi phục dữ liệu
+    
+    // Xử lý sự kiện khi chọn file khôi phục
     document.getElementById('backup-file-input').addEventListener('change', restoreFromBackupFile);
-
-    console.log('Cloud tab initialized successfully.');
 }
 
-// Hàm tạo danh sách Gists
-async function listGists() {
-    const gistId = await showGistSelector();
-    if (gistId) {
-        saveGitHubCredentials(null, gistId);
-        updateGitHubAuthStatus();
-        showToast('Đã chọn Gist thành công!', 'success');
-    }
-}
-
-// Hàm tạo mới Gist
-async function createNewGist() {
-    const newGistId = await createVocabularyGist();
-    if (newGistId) {
-        updateGitHubAuthStatus();
-        showToast('Đã tạo mới và lưu dữ liệu thành công!', 'success');
-    }
-}
-
-// Hàm tải xuống bản sao lưu dữ liệu
+// Tải xuống file sao lưu dữ liệu
 function downloadBackupFile() {
     try {
+        // Chuẩn bị dữ liệu để xuất file
         const backupData = {
             vocabulary: vocabulary,
             wordPackages: wordPackages,
@@ -3169,65 +3296,259 @@ function downloadBackupFile() {
             wordSynonyms: wordSynonyms,
             wordExamples: wordExamples,
             metadata: {
-                date: new Date().toISOString(),
                 version: '1.0',
+                date: new Date().toISOString(),
                 wordCount: Object.keys(vocabulary).length
             }
         };
         
-        const dataStr = JSON.stringify(backupData, null, 2);
-        const dataBlob = new Blob([dataStr], {type: 'application/json'});
+        // Chuyển đổi thành chuỗi JSON
+        const jsonData = JSON.stringify(backupData, null, 2);
         
-        // Tạo link để tải xuống
-        const downloadLink = document.createElement('a');
-        downloadLink.href = URL.createObjectURL(dataBlob);
-        downloadLink.download = `vocabulary_backup_${new Date().toISOString().split('T')[0]}.json`;
-        document.body.appendChild(downloadLink);
-        downloadLink.click();
-        document.body.removeChild(downloadLink);
+        // Tạo blob và URL cho download
+        const blob = new Blob([jsonData], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
         
-        showToast('Đã tải xuống bản sao lưu thành công!', 'success');
+        // Tạo liên kết download và kích hoạt
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'vocabulary_backup_' + new Date().toISOString().slice(0, 10) + '.json';
+        
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        // Giải phóng URL object
+        URL.revokeObjectURL(url);
+        
+        showToast('Đã tải xuống bản sao lưu dữ liệu thành công!', 'success');
     } catch (error) {
-        console.error('Lỗi khi tạo bản sao lưu:', error);
-        showToast('Không thể tạo bản sao lưu!', 'error');
+        console.error('Lỗi khi tạo file sao lưu:', error);
+        showToast('Không thể tạo file sao lưu!', 'error');
     }
 }
 
-// Hàm khôi phục dữ liệu từ file
+// Khôi phục dữ liệu từ file sao lưu
 function restoreFromBackupFile(event) {
     const file = event.target.files[0];
     if (!file) return;
     
+    // Kiểm tra loại file
+    if (file.type !== 'application/json' && !file.name.endsWith('.json')) {
+        showToast('Vui lòng chọn file JSON!', 'warning');
+        return;
+    }
+    
     const reader = new FileReader();
+    
     reader.onload = function(e) {
         try {
-            const backupData = JSON.parse(e.target.result);
+            const data = JSON.parse(e.target.result);
             
             // Kiểm tra tính hợp lệ của dữ liệu
-            if (!backupData.vocabulary || typeof backupData.vocabulary !== 'object') {
+            if (!data.vocabulary || typeof data.vocabulary !== 'object') {
                 throw new Error('Dữ liệu từ vựng không hợp lệ!');
             }
             
+            // Xác nhận từ người dùng trước khi khôi phục
+            const wordCount = Object.keys(data.vocabulary).length;
+            const confirmRestore = confirm(
+                `Bạn có chắc muốn khôi phục ${wordCount} từ vựng từ file này không? ` +
+                'Dữ liệu hiện tại sẽ được ghi đè!'
+            );
+            
+            if (!confirmRestore) {
+                return;
+            }
+            
             // Khôi phục dữ liệu
-            vocabulary = backupData.vocabulary || {};
-            wordPackages = backupData.wordPackages || {};
-            wordTopics = backupData.wordTopics || {};
-            wordSynonyms = backupData.wordSynonyms || {};
-            wordExamples = backupData.wordExamples || {};
+            vocabulary = data.vocabulary || {};
+            wordPackages = data.wordPackages || {};
+            wordTopics = data.wordTopics || {};
+            wordSynonyms = data.wordSynonyms || {};
+            wordExamples = data.wordExamples || {};
             
             // Lưu vào localStorage
             saveAllDataToLocalStorage();
             
-            // Cập nhật giao diện
+            // Làm mới giao diện
             refreshAllViews();
             
-            showToast('Đã khôi phục dữ liệu thành công!', 'success');
+            showToast(`Đã khôi phục thành công ${wordCount} từ vựng!`, 'success');
+            
+            // Reset input để có thể chọn lại cùng một file
+            event.target.value = '';
         } catch (error) {
             console.error('Lỗi khi khôi phục dữ liệu:', error);
-            showToast('File không hợp lệ hoặc bị lỗi!', 'error');
+            showToast('Không thể khôi phục từ file này: ' + error.message, 'error');
+            event.target.value = '';
         }
+    };
+    
+    reader.onerror = function() {
+        showToast('Lỗi khi đọc file!', 'error');
+        event.target.value = '';
+    };
+    
+    reader.readAsText(file);
+}
+
+// Khởi tạo tab đồng bộ đám mây
+function initCloudTab() {
+    try {
+        // Cập nhật trạng thái kết nối
+        document.getElementById('cloud-connection-status').textContent = isOnline ? 'Đã kết nối' : 'Mất kết nối';
+        document.getElementById('cloud-connection-status').className = isOnline ? 'online' : 'offline';
         
-        // Reset input để có thể chọn lại file
+        // Tải thông tin xác thực GitHub Gist
+        loadGitHubCredentials();
+        updateGitHubAuthStatus();
+        
+        // Cập nhật thống kê dữ liệu
+        updateDataStatistics();
+        
+        // Đăng ký các sự kiện mạng
+        window.addEventListener('online', function() {
+            isOnline = true;
+            document.getElementById('cloud-connection-status').textContent = 'Đã kết nối';
+            document.getElementById('cloud-connection-status').className = 'online';
+            showToast('Đã kết nối lại mạng!', 'success');
+        });
+        
+        window.addEventListener('offline', function() {
+            isOnline = false;
+            document.getElementById('cloud-connection-status').textContent = 'Mất kết nối';
+            document.getElementById('cloud-connection-status').className = 'offline';
+            showToast('Đã mất kết nối mạng!', 'warning');
+        });
+        
+        // Khởi tạo chức năng sao lưu và khôi phục
+        initBackupFeatures();
+        
+        console.log('Cloud tab initialized successfully.');
+        return true;
+    } catch (error) {
+        console.error('Error initializing cloud tab:', error);
+        return false;
+    }
+}
+
+// Khởi tạo chức năng sao lưu và khôi phục
+function initBackupFeatures() {
+    // Nút tải xuống bản sao lưu
+    document.getElementById('btn-backup-download').addEventListener('click', downloadBackupFile);
+    
+    // Nút khôi phục từ file
+    document.getElementById('btn-backup-restore').addEventListener('click', function() {
+        document.getElementById('backup-file-input').click();
+    });
+    
+    // Xử lý sự kiện khi chọn file khôi phục
+    document.getElementById('backup-file-input').addEventListener('change', restoreFromBackupFile);
+}
+
+// Tải xuống file sao lưu dữ liệu
+function downloadBackupFile() {
+    try {
+        // Chuẩn bị dữ liệu để xuất file
+        const backupData = {
+            vocabulary: vocabulary,
+            wordPackages: wordPackages,
+            wordTopics: wordTopics,
+            wordSynonyms: wordSynonyms,
+            wordExamples: wordExamples,
+            metadata: {
+                version: '1.0',
+                date: new Date().toISOString(),
+                wordCount: Object.keys(vocabulary).length
+            }
+        };
+        
+        // Chuyển đổi thành chuỗi JSON
+        const jsonData = JSON.stringify(backupData, null, 2);
+        
+        // Tạo blob và URL cho download
+        const blob = new Blob([jsonData], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        
+        // Tạo liên kết download và kích hoạt
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'vocabulary_backup_' + new Date().toISOString().slice(0, 10) + '.json';
+        
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        // Giải phóng URL object
+        URL.revokeObjectURL(url);
+        
+        showToast('Đã tải xuống bản sao lưu dữ liệu thành công!', 'success');
+    } catch (error) {
+        console.error('Lỗi khi tạo file sao lưu:', error);
+        showToast('Không thể tạo file sao lưu!', 'error');
+    }
+}
+
+// Khôi phục dữ liệu từ file sao lưu
+function restoreFromBackupFile(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    // Kiểm tra loại file
+    if (file.type !== 'application/json' && !file.name.endsWith('.json')) {
+        showToast('Vui lòng chọn file JSON!', 'warning');
+        return;
+    }
+    
+    const reader = new FileReader();
+    
+    reader.onload = function(e) {
+        try {
+            const data = JSON.parse(e.target.result);
+            
+            // Kiểm tra tính hợp lệ của dữ liệu
+            if (!data.vocabulary || typeof data.vocabulary !== 'object') {
+                throw new Error('Dữ liệu từ vựng không hợp lệ!');
+            }
+            
+            // Xác nhận từ người dùng trước khi khôi phục
+            const wordCount = Object.keys(data.vocabulary).length;
+            const confirmRestore = confirm(
+                `Bạn có chắc muốn khôi phục ${wordCount} từ vựng từ file này không? ` +
+                'Dữ liệu hiện tại sẽ được ghi đè!'
+            );
+            
+            if (!confirmRestore) {
+                return;
+            }
+            
+            // Khôi phục dữ liệu
+            vocabulary = data.vocabulary || {};
+            wordPackages = data.wordPackages || {};
+            wordTopics = data.wordTopics || {};
+            wordSynonyms = data.wordSynonyms || {};
+            wordExamples = data.wordExamples || {};
+            
+            // Lưu vào localStorage
+            saveAllDataToLocalStorage();
+            
+            // Làm mới giao diện
+            refreshAllViews();
+            
+            showToast(`Đã khôi phục thành công ${wordCount} từ vựng!`, 'success');
+            
+            // Reset input để có thể chọn lại cùng một file
+            event.target.value = '';
+        } catch (error) {
+            console.error('Lỗi khi khôi phục dữ liệu:', error);
+            showToast('Không thể khôi phục từ file này: ' + error.message, 'error');
+            event.target.value = '';
+        }
+    };
+    
+    reader.onerror = function() {
+        showToast('Lỗi khi đọc file!', 'error');
         event.target.value = '';
     };
     
