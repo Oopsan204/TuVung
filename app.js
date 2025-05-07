@@ -3120,8 +3120,116 @@ function initCloudTab() {
         return;
     }
 
-    // Example: Update cloud statistics or perform initialization tasks
+    // Cập nhật thống kê dữ liệu
     updateDataStatistics();
 
+    // Thêm các event listener cho các nút trong tab Cloud
+    document.getElementById('github-auth-btn').addEventListener('click', authenticateGitHub);
+    document.getElementById('github-list-gists-btn').addEventListener('click', listGists);
+    document.getElementById('github-create-gist-btn').addEventListener('click', createNewGist);
+    document.getElementById('github-update-gist-btn').addEventListener('click', updateVocabularyGist);
+    document.getElementById('github-load-gist-btn').addEventListener('click', loadFromGist);
+    document.getElementById('btn-backup-download').addEventListener('click', downloadBackupFile);
+    document.getElementById('btn-backup-restore').addEventListener('click', () => {
+        document.getElementById('backup-file-input').click();
+    });
+
+    // Lắng nghe sự kiện khi người dùng chọn file để khôi phục dữ liệu
+    document.getElementById('backup-file-input').addEventListener('change', restoreFromBackupFile);
+
     console.log('Cloud tab initialized successfully.');
+}
+
+// Hàm tạo danh sách Gists
+async function listGists() {
+    const gistId = await showGistSelector();
+    if (gistId) {
+        saveGitHubCredentials(null, gistId);
+        updateGitHubAuthStatus();
+        showToast('Đã chọn Gist thành công!', 'success');
+    }
+}
+
+// Hàm tạo mới Gist
+async function createNewGist() {
+    const newGistId = await createVocabularyGist();
+    if (newGistId) {
+        updateGitHubAuthStatus();
+        showToast('Đã tạo mới và lưu dữ liệu thành công!', 'success');
+    }
+}
+
+// Hàm tải xuống bản sao lưu dữ liệu
+function downloadBackupFile() {
+    try {
+        const backupData = {
+            vocabulary: vocabulary,
+            wordPackages: wordPackages,
+            wordTopics: wordTopics,
+            wordSynonyms: wordSynonyms,
+            wordExamples: wordExamples,
+            metadata: {
+                date: new Date().toISOString(),
+                version: '1.0',
+                wordCount: Object.keys(vocabulary).length
+            }
+        };
+        
+        const dataStr = JSON.stringify(backupData, null, 2);
+        const dataBlob = new Blob([dataStr], {type: 'application/json'});
+        
+        // Tạo link để tải xuống
+        const downloadLink = document.createElement('a');
+        downloadLink.href = URL.createObjectURL(dataBlob);
+        downloadLink.download = `vocabulary_backup_${new Date().toISOString().split('T')[0]}.json`;
+        document.body.appendChild(downloadLink);
+        downloadLink.click();
+        document.body.removeChild(downloadLink);
+        
+        showToast('Đã tải xuống bản sao lưu thành công!', 'success');
+    } catch (error) {
+        console.error('Lỗi khi tạo bản sao lưu:', error);
+        showToast('Không thể tạo bản sao lưu!', 'error');
+    }
+}
+
+// Hàm khôi phục dữ liệu từ file
+function restoreFromBackupFile(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const backupData = JSON.parse(e.target.result);
+            
+            // Kiểm tra tính hợp lệ của dữ liệu
+            if (!backupData.vocabulary || typeof backupData.vocabulary !== 'object') {
+                throw new Error('Dữ liệu từ vựng không hợp lệ!');
+            }
+            
+            // Khôi phục dữ liệu
+            vocabulary = backupData.vocabulary || {};
+            wordPackages = backupData.wordPackages || {};
+            wordTopics = backupData.wordTopics || {};
+            wordSynonyms = backupData.wordSynonyms || {};
+            wordExamples = backupData.wordExamples || {};
+            
+            // Lưu vào localStorage
+            saveAllDataToLocalStorage();
+            
+            // Cập nhật giao diện
+            refreshAllViews();
+            
+            showToast('Đã khôi phục dữ liệu thành công!', 'success');
+        } catch (error) {
+            console.error('Lỗi khi khôi phục dữ liệu:', error);
+            showToast('File không hợp lệ hoặc bị lỗi!', 'error');
+        }
+        
+        // Reset input để có thể chọn lại file
+        event.target.value = '';
+    };
+    
+    reader.readAsText(file);
 }
