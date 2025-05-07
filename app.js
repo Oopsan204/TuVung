@@ -411,25 +411,15 @@ async function showGistSelector() {
 }
 
 // Tải GitHub credentials khi khởi động
-window.addEventListener('DOMContentLoaded', function () {
-    // Tải token và gistId từ localStorage
+window.addEventListener('DOMContentLoaded', async function () {
     loadGitHubCredentials();
 
-    // Tự động điền token GitHub (chỉ dùng cho phát triển, xóa dòng này khi triển khai)
     if (!githubToken) {
-        // Token đã được cài đặt trước (thay YOUR_TOKEN_HERE bằng token của bạn)
-        const defaultToken = "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";
-        saveGitHubCredentials(defaultToken, null);
-        githubToken = defaultToken;
-        console.log("Đã tự động thiết lập token GitHub");
-
-        // Sau khi thiết lập token, cập nhật hiển thị trạng thái
-        setTimeout(() => {
-            if (typeof updateGitHubAuthStatus === 'function') {
-                updateGitHubAuthStatus();
-            }
-        }, 500);
+        showToast('Vui lòng xác thực GitHub để sử dụng tính năng đồng bộ!', 'warning');
     }
+
+    // Automatically load data from Gist on page load
+    await loadFromGist();
 });
 
 // Hàm làm mới tất cả các views
@@ -1684,7 +1674,7 @@ function loadTopicWords(topic) {
     });
 }
 
-function createNewTopic() {
+async function createNewTopic() {
     const topicName = prompt('Nhập tên chủ đề mới:');
     if (!topicName) return;
 
@@ -1693,16 +1683,16 @@ function createNewTopic() {
         return;
     }
 
-    // Tạo chủ đề mới
     wordTopics[topicName] = [];
     saveTopics();
 
-    // Cập nhật giao diện
     loadTopicsList();
     showToast(`Đã tạo chủ đề "${topicName}" thành công!`, 'success');
-    // Cập nhật dropdown chủ đề ở các nơi
     populateTopicDropdown();
     populateApiTopicDropdown();
+
+    // Automatically update Gist
+    await updateVocabularyGist();
 }
 
 function deleteTopic() {
@@ -2447,7 +2437,7 @@ function clearDictionarySearch() {
     searchDictionary();
 }
 
-function addNewWordToDictionary() {
+async function addNewWordToDictionary() {
     const engWord = document.getElementById('dict-word-english').value.trim().toLowerCase();
     const vietWord = document.getElementById('dict-word-vietnamese').value.trim();
     const topicSelect = document.getElementById('dict-topic-select');
@@ -2458,385 +2448,38 @@ function addNewWordToDictionary() {
         return;
     }
 
-    // Kiểm tra từ đã tồn tại chưa
     if (vocabulary[engWord]) {
         const confirmOverwrite = confirm(`Từ "${engWord}" đã tồn tại với nghĩa "${vocabulary[engWord]}". Bạn có muốn cập nhật nghĩa mới không?`);
         if (!confirmOverwrite) return;
     }
 
-    // Thêm từ mới hoặc cập nhật nghĩa
     vocabulary[engWord] = vietWord;
 
-    // Thêm vào chủ đề nếu chọn
     if (topic) {
-        if (!wordTopics[topic]) wordTopics[topic] = [];
-        if (!wordTopics[topic].includes(engWord)) wordTopics[topic].push(engWord);
-        saveTopics();
+        if (!wordTopics[topic]) {
+            wordTopics[topic] = [];
+        }
+        if (!wordTopics[topic].includes(engWord)) {
+            wordTopics[topic].push(engWord);
+        }
     }
 
-    // Cập nhật danh sách từ vựng
+    saveVocabulary();
+    saveTopics();
     loadDictionaryWords();
 
-    // Xóa trống ô input
     document.getElementById('dict-word-english').value = '';
     document.getElementById('dict-word-vietnamese').value = '';
     if (topicSelect) topicSelect.value = '';
 
-    // Lưu từ vựng
-    saveVocabulary();
     showToast(`Đã ${vocabulary[engWord] ? 'cập nhật' : 'thêm'} từ "${engWord}" thành công!`, 'success');
 
-    // Cập nhật wordList cho phần học từ
     if (!wordList.includes(engWord)) {
         wordList.push(engWord);
     }
-}
 
-async function speakWord(word) {
-    fallbackSpeak(word);
-}
-
-// Cập nhật hàm speakCurrentWord cho tab học từ mới
-async function speakCurrentWord() {
-    if (wordList.length === 0) return;
-    const word = wordList[currentIndex];
-    await speakWord(word);
-}
-
-// Cập nhật hàm speakFlashcardWord cho tab thẻ ghi nhớ
-async function speakFlashcardWord() {
-    const word = flashcardWords[currentFlashcardIndex];
-    await speakWord(word);
-}
-
-
-// Hàm phát âm bằng SpeechSynthesis API (phương pháp cuối)
-function fallbackSpeak(word) {
-    if ('speechSynthesis' in window) {
-        const utter = new SpeechSynthesisUtterance(word);
-        utter.lang = 'en-US';
-        const selectedVoice = localStorage.getItem('selectedVoice');
-        if (selectedVoice) {
-            const voices = window.speechSynthesis.getVoices();
-            const voice = voices.find(v => v.name === selectedVoice);
-            if (voice) utter.voice = voice;
-        }
-        const speechRate = localStorage.getItem('speechRate');
-        if (speechRate) {
-            utter.rate = parseFloat(speechRate);
-        }
-        window.speechSynthesis.speak(utter);
-    }
-}
-
-function deleteWord(word) {
-    const confirmDelete = confirm(`Bạn có chắc muốn xóa từ "${word}" không?`);
-    if (!confirmDelete) return;
-
-    // Xóa từ khỏi từ điển
-    delete vocabulary[word];
-
-    // Xóa từ khỏi wordList
-    wordList = wordList.filter(w => w !== word);
-
-    // Cập nhật danh sách từ vựng
-    loadDictionaryWords();
-
-    // Lưu từ vựng
-    saveVocabulary();
-    showToast(`Đã xóa từ "${word}" thành công!`, 'success');
-}
-
-// --- Free Dictionary API lookup logic ---
-async function lookupWordFromAPI(word) {
-    const apiUrl = `https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(word)}`;
-    try {
-        const res = await fetch(apiUrl);
-        if (!res.ok) return null;
-        const data = await res.json();
-        if (!Array.isArray(data) || !data[0]) return null;
-        const entry = data[0];
-
-        // Lấy nghĩa tiếng Anh đầu tiên
-        let meaning = '';
-        let examples = [];
-        let phonetic = entry.phonetic || '';
-
-        // Lấy tất cả các ví dụ từ các định nghĩa khác nhau
-        if (entry.meanings && entry.meanings.length > 0) {
-            entry.meanings.forEach(meaningObj => {
-                if (meaningObj.definitions && meaningObj.definitions.length > 0) {
-                    meaningObj.definitions.forEach(def => {
-                        if (!meaning) meaning = def.definition || '';
-                        if (def.example) examples.push(def.example);
-                    });
-                }
-            });
-        }
-
-        // Lưu các ví dụ này vào wordExamples nếu tìm thấy ít nhất một ví dụ
-        if (examples.length > 0) {
-            wordExamples[entry.word.toLowerCase()] = examples;
-            localStorage.setItem('wordExamples', JSON.stringify(wordExamples));
-        }
-
-        return {
-            word: entry.word,
-            meaning,
-            phonetic,
-            examples,
-            raw: entry
-        };
-    } catch (e) {
-        console.error("Lỗi khi tra cứu từ từ Free Dictionary API:", e);
-        return null;
-    }
-}
-
-// Hiển thị kết quả tra cứu từ API
-function showApiLookupResult(result) {
-    const box = document.getElementById('api-lookup-result');
-    const content = document.getElementById('api-lookup-content');
-    const btnAdd = document.getElementById('add-api-word-btn');
-    const vnBox = document.getElementById('api-vn-meaning-box');
-    const vnInput = document.getElementById('api-vn-meaning');
-    const topicSelect = document.getElementById('api-topic-select');
-    if (!result) {
-        box.style.display = 'block';
-        content.innerHTML = '<span style="color:red">Không tìm thấy từ trong từ điển!</span>';
-        btnAdd.style.display = 'none';
-        if (vnBox) vnBox.style.display = 'none';
-        return;
-    }
-    let html = `<b>Từ:</b> <span>${result.word}</span><br>`;
-    if (result.phonetic) html += `<b>Phát âm:</b> <span>${result.phonetic}</span><br>`;
-    html += `<b>Định nghĩa (EN):</b> <span>${result.meaning}</span><br>`;
-    if (result.examples && result.examples.length > 0) {
-        html += `<b>Ví dụ:</b><ul>`;
-        result.examples.forEach(example => {
-            html += `<li>${example}</li>`;
-        });
-        html += `</ul>`;
-    }
-    content.innerHTML = html;
-    btnAdd.style.display = 'inline-block';
-    if (vnBox) vnBox.style.display = 'block';
-    if (vnInput) vnInput.value = '';
-    if (topicSelect) populateApiTopicDropdown();
-    btnAdd.onclick = function () {
-        const vnMeaning = vnInput ? vnInput.value.trim() : '';
-        const topic = topicSelect ? topicSelect.value : '';
-        if (!vnMeaning) {
-            showToast('Vui lòng nhập nghĩa tiếng Việt ngắn gọn!', 'warning');
-            if (vnInput) vnInput.focus();
-            return;
-        }
-        vocabulary[result.word.toLowerCase()] = vnMeaning;
-        // Thêm vào chủ đề nếu chọn
-        if (topic) {
-            if (!wordTopics[topic]) wordTopics[topic] = [];
-            if (!wordTopics[topic].includes(result.word.toLowerCase())) wordTopics[topic].push(result.word.toLowerCase());
-            saveTopics();
-        }
-        saveVocabulary();
-        loadDictionaryWords();
-        box.style.display = 'none';
-        showToast('Đã thêm từ vào từ vựng!', 'success');
-    };
-    box.style.display = 'block';
-}
-
-// Cloud tab (Tab đám mây)
-function initCloudTab() {
-    // Kiểm tra và cập nhật trạng thái kết nối mạng
-    updateConnectionStatus();
-    window.addEventListener('online', updateConnectionStatus);
-    window.addEventListener('offline', updateConnectionStatus);
-
-    // Thêm sự kiện cho các nút sao lưu
-    document.getElementById('btn-backup-download').addEventListener('click', downloadBackup);
-    document.getElementById('btn-backup-restore').addEventListener('click', clickRestoreBackup);
-    document.getElementById('backup-file-input').addEventListener('change', handleBackupFile);
-
-    // GitHub Gist
-    setupGithubGistEventListeners();
-    updateGitHubAuthStatus();
-
-    // Cập nhật thông tin thống kê
-    updateDataStatistics();
-}
-
-function updateConnectionStatus() {
-    const status = document.getElementById('cloud-connection-status');
-    if (navigator.onLine) {
-        status.textContent = 'Đã kết nối';
-        status.classList.add('online');
-        status.classList.remove('offline');
-    } else {
-        status.textContent = 'Ngoại tuyến';
-        status.classList.add('offline');
-        status.classList.remove('online');
-    }
-}
-
-function updateDataStatistics() {
-    // Cập nhật các con số thống kê
-    document.getElementById('cloud-vocab-count').textContent = Object.keys(vocabulary).length;
-    document.getElementById('cloud-topic-count').textContent = Object.keys(wordTopics).length;
-    document.getElementById('cloud-synonym-count').textContent = Object.keys(wordSynonyms).length;
-
-    // Cập nhật thời gian cập nhật cuối
-    const lastUpdated = localStorage.getItem('lastUpdated');
-    if (lastUpdated) {
-        const date = new Date(lastUpdated);
-        document.getElementById('cloud-last-update').textContent = formatDateTime(date);
-    }
-}
-
-function formatDateTime(date) {
-    return date.toLocaleString('vi-VN', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit'
-    });
-}
-
-// Tải xuống bản sao lưu
-function downloadBackup() {
-    const backupData = {
-        vocabulary: vocabulary,
-        wordPackages: wordPackages,
-        wordTopics: wordTopics,
-        wordSynonyms: wordSynonyms,
-        exportDate: new Date().toISOString(),
-        version: '1.0'
-    };
-
-    const dataStr = JSON.stringify(backupData, null, 2);
-    const blob = new Blob([dataStr], { type: 'application/json' });
-
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    const date = new Date().toISOString().split('T')[0];
-    a.download = `vocabulary_backup_${date}.json`;
-    a.href = url;
-    a.click();
-    URL.revokeObjectURL(url);
-
-    showToast('Đã tải xuống bản sao lưu!', 'success');
-}
-
-// Kích hoạt tệp đầu vào để khôi phục
-function clickRestoreBackup() {
-    document.getElementById('backup-file-input').click();
-}
-
-// Xử lý tệp sao lưu được chọn
-function handleBackupFile(event) {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = function (e) {
-        try {
-            const data = JSON.parse(e.target.result);
-
-            // Kiểm tra định dạng dữ liệu
-            if (!data.vocabulary || !data.wordTopics || !data.wordSynonyms) {
-                throw new Error('Định dạng tệp sao lưu không hợp lệ!');
-            }
-
-            // Hỏi xác nhận từ người dùng
-            const confirmRestore = confirm(
-                `Khôi phục dữ liệu từ bản sao lưu này?\n` +
-                `- Từ vựng: ${Object.keys(data.vocabulary).length} từ\n` +
-                `- Chủ đề: ${Object.keys(data.wordTopics).length} chủ đề\n` +
-                `- Nhóm đồng nghĩa: ${Object.keys(data.wordSynonyms).length} nhóm\n\n` +
-                `Thao tác này sẽ thay thế dữ liệu hiện tại của bạn!`
-            );
-
-            if (confirmRestore) {
-                restoreFromBackup(data);
-            }
-        } catch (error) {
-            console.error("Lỗi khi đọc tệp sao lưu:", error);
-            showToast('Tệp sao lưu không hợp lệ: ' + error.message, 'error');
-        }
-
-        // Reset input để có thể chọn lại tệp tương tự
-        event.target.value = "";
-    };
-
-    reader.readAsText(file);
-}
-
-// Khôi phục dữ liệu từ bản sao lưu
-async function restoreFromBackup(data) {
-    // Khôi phục dữ liệu
-    vocabulary = data.vocabulary || {};
-    wordPackages = data.wordPackages || {};
-    wordTopics = data.wordTopics || {};
-    wordSynonyms = data.wordSynonyms || {};
-
-    // Lưu dữ liệu vào localStorage
-    saveAllDataToLocalStorage();
-
-    // Cập nhật giao diện người dùng
-    loadDictionaryWords();
-    loadTopicsList();
-    loadSynonymsList();
-    updateDataStatistics();
-
-    showToast('Đã khôi phục dữ liệu từ bản sao lưu thành công!', 'success');
-}
-
-// Các event listeners cho GitHub Gist
-function setupGithubGistEventListeners() {
-    // Nút xác thực GitHub
-    document.getElementById('github-auth-btn').addEventListener('click', async function () {
-        const success = await authenticateGitHub();
-        if (success) {
-            updateGitHubAuthStatus();
-        }
-    });
-
-    // Nút liệt kê Gists
-    document.getElementById('github-list-gists-btn').addEventListener('click', async function () {
-        const gistId = await showGistSelector();
-        if (gistId) {
-            saveGitHubCredentials(null, gistId);
-            showToast('Đã chọn Gist: ' + gistId, 'success');
-            updateGitHubAuthStatus();
-        }
-    });
-
-    // Nút tạo Gist mới
-    document.getElementById('github-create-gist-btn').addEventListener('click', async function () {
-        const newGistId = await createVocabularyGist();
-        if (newGistId) {
-            showToast('Đã tạo Gist mới với ID: ' + newGistId, 'success');
-            updateGitHubAuthStatus();
-        }
-    });
-
-    // Nút cập nhật lên Gist
-    document.getElementById('github-update-gist-btn').addEventListener('click', async function () {
-        const success = await updateVocabularyGist();
-        if (success) {
-            showToast('Đã cập nhật dữ liệu từ vựng lên Gist', 'success');
-        }
-    });
-
-    // Nút tải từ Gist
-    document.getElementById('github-load-gist-btn').addEventListener('click', async function () {
-        const success = await loadFromGist();
-        if (success) {
-            showToast('Đã tải dữ liệu từ vựng từ Gist', 'success');
-            updateDataStatistics();
-        }
-    });
+    // Automatically update Gist
+    await updateVocabularyGist();
 }
 
 // Cập nhật hiển thị trạng thái xác thực GitHub
@@ -2956,6 +2599,9 @@ function addNewWordToDictionary() {
     if (!wordList.includes(engWord)) {
         wordList.push(engWord);
     }
+
+    // Automatically update Gist
+    updateVocabularyGist();
 }
 
 function populateApiTopicDropdown() {
@@ -3467,175 +3113,15 @@ document.getElementById('task-completion').addEventListener('click', function() 
     document.getElementById('completion-task').classList.add('active-task');
 });
 
-// Thiết lập task nghe viết từ
-function setupDictationTask() {
-    const dictationInput = document.getElementById('dictation-input');
-    const dictationResult = document.getElementById('dictation-result');
-    const dictationNextButton = document.getElementById('dictation-next');
-    const dictationSpeakButton = document.getElementById('dictation-speak');
-    const checkDictationButton = document.getElementById('check-dictation');
-    
-    let dictationWords = [];
-    let currentDictationIndex = 0;
-    
-    // Khởi tạo danh sách từ vựng cho nhiệm vụ nghe viết
-    function initDictationWords(words) {
-        dictationWords = [...words];
-        shuffleArray(dictationWords);
-        currentDictationIndex = 0;
-        showNextDictationWord();
+function initCloudTab() {
+    const cloudTab = document.getElementById('cloud');
+    if (!cloudTab) {
+        console.error('Cloud tab element not found!');
+        return;
     }
-    
-    // Hiển thị từ tiếp theo cho nhiệm vụ nghe viết
-    function showNextDictationWord() {
-        // Reset các giá trị
-        dictationInput.value = '';
-        dictationResult.innerHTML = '';
-        dictationResult.className = 'result-box';
-        
-        updateLearningProgress();
-    }
-    
-    // Sự kiện khi nhấp vào nút phát âm
-    dictationSpeakButton.addEventListener('click', async function() {
-        if (dictationWords.length > 0 && currentDictationIndex < dictationWords.length) {
-            await speakWord(dictationWords[currentDictationIndex]);
-        }
-    });
-    
-    // Sự kiện khi nhấp vào nút kiểm tra
-    checkDictationButton.addEventListener('click', function() {
-        checkDictation();
-    });
-    
-    // Sự kiện khi nhấp vào nút từ tiếp theo
-    dictationNextButton.addEventListener('click', function() {
-        currentDictationIndex++;
-        if (currentDictationIndex >= dictationWords.length) {
-            currentDictationIndex = 0;
-        }
-        showNextDictationWord();
-    });
-    
-    // Sự kiện khi nhấp Enter trong ô nhập
-    dictationInput.addEventListener('keyup', function(e) {
-        if (e.key === 'Enter') {
-            checkDictation();
-        }
-    });
-    
-    return {
-        initWords: initDictationWords
-    };
-}
 
-// Thiết lập task xem nghĩa viết từ
-function setupTranslationTask() {
-    const wordInput = document.getElementById('word-input');
-    const wordResult = document.getElementById('word-result');
-    const translationNextButton = document.getElementById('translation-next');
-    const meaningTextElement = document.getElementById('meaning-text');
-    const checkWordButton = document.getElementById('check-word');
-    
-    let translationWords = [];
-    let currentTranslationIndex = 0;
-    
-    // Khởi tạo danh sách từ vựng cho nhiệm vụ dịch
-    function initTranslationWords(words) {
-        translationWords = [...words];
-        shuffleArray(translationWords);
-        currentTranslationIndex = 0;
-        showNextTranslationWord();
-    }
-    
-    // Hiển thị từ tiếp theo cho nhiệm vụ dịch
-    function showNextTranslationWord() {
-        // Reset các giá trị
-        wordInput.value = '';
-        wordResult.innerHTML = '';
-        wordResult.className = 'result-box';
-        
-        // Hiển thị nghĩa tiếng Việt
-        if (translationWords.length > 0 && currentTranslationIndex < translationWords.length) {
-            meaningTextElement.textContent = vocabulary[translationWords[currentTranslationIndex]] || '';
-        }
-        
-        updateLearningProgress();
-    }
-    
-    // Sự kiện khi nhấp vào nút kiểm tra
-    checkWordButton.addEventListener('click', function() {
-        checkTranslationWord();
-    });
-    
-    // Sự kiện khi nhấp vào nút từ tiếp theo
-    translationNextButton.addEventListener('click', function() {
-        currentTranslationIndex++;
-        if (currentTranslationIndex >= translationWords.length) {
-            currentTranslationIndex = 0;
-        }
-        showNextTranslationWord();
-    });
-    
-    // Sự kiện khi nhấp Enter trong ô nhập
-    wordInput.addEventListener('keyup', function(e) {
-        if (e.key === 'Enter') {
-            checkTranslationWord();
-        }
-    });
-    
-    // Kiểm tra từ người dùng nhập vào
-    function checkTranslationWord() {
-        const userInput = wordInput.value.trim().toLowerCase();
-        
-        if (userInput === '') {
-            wordResult.textContent = 'Vui lòng nhập từ tiếng Anh!';
-            wordResult.className = 'result-box';
-            return;
-        }
-        
-        const correctWord = translationWords[currentTranslationIndex].toLowerCase();
-        
-        if (userInput === correctWord) {
-            wordResult.innerHTML = `<p>✓ Chính xác!</p>`;
-            wordResult.className = 'result-box correct';
-            playCorrectSound();
-            markWordAsLearned();
-        } else {
-            wordResult.innerHTML = `<p>✗ Không chính xác! Từ đúng là "${translationWords[currentTranslationIndex]}".</p>`;
-            wordResult.className = 'result-box incorrect';
-            playIncorrectSound();
-        }
-        
-        updateLearningProgress();
-    }
-    
-    return {
-        initWords: initTranslationWords
-    };
-}
+    // Example: Update cloud statistics or perform initialization tasks
+    updateDataStatistics();
 
-// Hàm phát âm thanh khi trả lời đúng
-function playCorrectSound() {
-    // Đơn giản hóa, không thật sự phát âm thanh
-    console.log("Correct answer!");
+    console.log('Cloud tab initialized successfully.');
 }
-
-// Hàm phát âm thanh khi trả lời sai
-function playIncorrectSound() {
-    // Đơn giản hóa, không thật sự phát âm thanh
-    console.log("Incorrect answer!");
-}
-
-// Thêm sự kiện cho nút hoàn thành từ
-document.getElementById('task-completion').addEventListener('click', function() {
-    // Chuyển đổi trạng thái active của các nút
-    document.querySelectorAll('.task-btn').forEach(btn => btn.classList.remove('active'));
-    this.classList.add('active');
-    
-    // Ẩn tất cả các phần và hiển thị phần hoàn thành từ
-    document.querySelectorAll('.practice-section').forEach(section => {
-        section.classList.remove('active-task');
-    });
-    document.getElementById('completion-task').classList.add('active-task');
-});
