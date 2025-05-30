@@ -8,6 +8,245 @@ let wordExamples = {}; // Thêm đối tượng để lưu trữ ví dụ câu c
 // Kiểm tra trạng thái kết nối
 let isOnline = navigator.onLine;
 
+// Thêm hệ thống SRS (Spaced Repetition System)
+let srsData = {}; // Dữ liệu SRS cho từng từ
+let srsSettings = {
+    initialInterval: 1, // Ngày
+    easeFactor: 2.5,
+    minEaseFactor: 1.3,
+    maxEaseFactor: 3.0,
+    easyBonus: 1.3,
+    hardPenalty: 0.8
+};
+
+// Hằng số cho độ khó SRS
+const SRS_DIFFICULTY = {
+    AGAIN: 0,    // Sai hoàn toàn
+    HARD: 1,     // Khó
+    GOOD: 2,     // Vừa phải
+    EASY: 3      // Dễ
+};
+
+// Hệ thống SRS chính
+const SRSManager = {
+    // Khởi tạo dữ liệu SRS cho một từ
+    initWord(word) {
+        if (!srsData[word]) {
+            srsData[word] = {
+                interval: srsSettings.initialInterval,
+                easeFactor: srsSettings.easeFactor,
+                repetitions: 0,
+                lastReview: null,
+                nextReview: new Date(),
+                streak: 0,
+                totalReviews: 0,
+                correctReviews: 0,
+                difficulty: SRS_DIFFICULTY.GOOD,
+                history: []
+            };
+        }
+        return srsData[word];
+    },
+
+    // Tính toán interval tiếp theo dựa trên thuật toán SM-2
+    calculateNextInterval(wordData, quality) {
+        let { interval, easeFactor, repetitions } = wordData;
+
+        // Cập nhật ease factor
+        easeFactor = easeFactor + (0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02));
+        easeFactor = Math.max(srsSettings.minEaseFactor, Math.min(srsSettings.maxEaseFactor, easeFactor));
+
+        // Tính interval mới
+        if (quality < 3) {
+            // Sai hoặc khó - reset interval
+            repetitions = 0;
+            interval = 1;
+        } else {
+            repetitions++;
+            if (repetitions === 1) {
+                interval = 1;
+            } else if (repetitions === 2) {
+                interval = 6;
+            } else {
+                interval = Math.round(interval * easeFactor);
+            }
+        }
+
+        // Áp dụng bonus/penalty
+        if (quality === SRS_DIFFICULTY.EASY) {
+            interval = Math.round(interval * srsSettings.easyBonus);
+        } else if (quality === SRS_DIFFICULTY.HARD) {
+            interval = Math.round(interval * srsSettings.hardPenalty);
+        }
+
+        return { interval, easeFactor, repetitions };
+    },
+
+    // Cập nhật dữ liệu SRS sau khi ôn tập
+    updateWordSRS(word, quality) {
+        const wordData = this.initWord(word);
+        const now = new Date();
+
+        // Tính toán interval mới
+        const { interval, easeFactor, repetitions } = this.calculateNextInterval(wordData, quality);
+
+        // Cập nhật streak
+        let streak = wordData.streak;
+        if (quality >= SRS_DIFFICULTY.GOOD) {
+            streak++;
+        } else {
+            streak = 0;
+        }
+
+        // Cập nhật dữ liệu
+        wordData.interval = interval;
+        wordData.easeFactor = easeFactor;
+        wordData.repetitions = repetitions;
+        wordData.lastReview = now;
+        wordData.nextReview = new Date(now.getTime() + interval * 24 * 60 * 60 * 1000);
+        wordData.streak = streak;
+        wordData.totalReviews++;
+        wordData.difficulty = quality;
+
+        if (quality >= SRS_DIFFICULTY.GOOD) {
+            wordData.correctReviews++;
+        }
+
+        // Lưu lịch sử
+        wordData.history.push({
+            date: now,
+            quality: quality,
+            interval: interval,
+            easeFactor: easeFactor
+        });
+
+        // Giới hạn lịch sử (chỉ giữ 50 lần gần nhất)
+        if (wordData.history.length > 50) {
+            wordData.history = wordData.history.slice(-50);
+        }
+
+        this.saveSRSData();
+        return wordData;
+    },
+
+    // Lấy danh sách từ cần ôn tập
+    getDueWords() {
+        const now = new Date();
+        const dueWords = [];
+
+        Object.keys(vocabulary).forEach(word => {
+            const wordData = srsData[word];
+            if (!wordData) {
+                // Từ mới chưa học
+                dueWords.push({
+                    word: word,
+                    priority: 100, // Ưu tiên cao cho từ mới
+                    isNew: true
+                });
+            } else if (wordData.nextReview <= now) {
+                // Từ đã đến hạn ôn tập
+                const overdueDays = Math.floor((now - wordData.nextReview) / (24 * 60 * 60 * 1000));
+                dueWords.push({
+                    word: word,
+                    priority: 50 + overdueDays * 10, // Ưu tiên tăng theo số ngày quá hạn
+                    isNew: false,
+                    overdueDays: overdueDays
+                });
+            }
+        });
+
+        // Sắp xếp theo độ ưu tiên
+        dueWords.sort((a, b) => b.priority - a.priority);
+        return dueWords;
+    },
+
+    // Lấy thống kê SRS
+    getStatistics() {
+        const stats = {
+            totalWords: Object.keys(vocabulary).length,
+            studiedWords: Object.keys(srsData).length,
+            newWords: 0,
+            dueWords: 0,
+            learnedWords: 0,
+            averageAccuracy: 0
+        };
+
+        const now = new Date();
+        let totalAccuracy = 0;
+        let totalReviews = 0;
+
+        Object.keys(vocabulary).forEach(word => {
+            const wordData = srsData[word];
+            if (!wordData) {
+                stats.newWords++;
+            } else {
+                if (wordData.nextReview <= now) {
+                    stats.dueWords++;
+                }
+                if (wordData.interval >= 21) { // Từ có interval >= 21 ngày được coi là đã học
+                    stats.learnedWords++;
+                }
+                totalReviews += wordData.totalReviews;
+                if (wordData.totalReviews > 0) {
+                    totalAccuracy += (wordData.correctReviews / wordData.totalReviews);
+                }
+            }
+        });
+
+        if (stats.studiedWords > 0) {
+            stats.averageAccuracy = Math.round((totalAccuracy / stats.studiedWords) * 100);
+        }
+
+        return stats;
+    },
+
+    // Lưu dữ liệu SRS
+    saveSRSData() {
+        localStorage.setItem('srsData', JSON.stringify(srsData));
+        localStorage.setItem('srsSettings', JSON.stringify(srsSettings));
+    },
+
+    // Tải dữ liệu SRS
+    loadSRSData() {
+        try {
+            const savedSRS = localStorage.getItem('srsData');
+            if (savedSRS) {
+                srsData = JSON.parse(savedSRS);
+                // Chuyển đổi string thành Date objects
+                Object.values(srsData).forEach(wordData => {
+                    if (wordData.lastReview) {
+                        wordData.lastReview = new Date(wordData.lastReview);
+                    }
+                    if (wordData.nextReview) {
+                        wordData.nextReview = new Date(wordData.nextReview);
+                    }
+                    if (wordData.history) {
+                        wordData.history.forEach(entry => {
+                            entry.date = new Date(entry.date);
+                        });
+                    }
+                });
+            }
+
+            const savedSettings = localStorage.getItem('srsSettings');
+            if (savedSettings) {
+                srsSettings = { ...srsSettings, ...JSON.parse(savedSettings) };
+            }
+        } catch (error) {
+            console.error('Lỗi khi tải dữ liệu SRS:', error);
+            srsData = {};
+        }
+    },
+
+    // Reset dữ liệu SRS cho một từ
+    resetWord(word) {
+        if (srsData[word]) {
+            delete srsData[word];
+            this.saveSRSData();
+        }
+    }
+};
+
 // Các biến cho GitHub Gist
 let githubToken = '';
 let gistId = '';
@@ -674,9 +913,7 @@ async function loadVocabulary() {
         }
 
         // Hiển thị số lượng từ vựng đã tải
-        console.log("Tổng số từ vựng đã tải:", Object.keys(vocabulary).length);
-
-        // Khởi tạo các tab
+        console.log("Tổng số từ vựng đã tải:", Object.keys(vocabulary).length);        // Khởi tạo các tab
         initLearnTab();
         initDictionaryTab();
         initQuizTab();
@@ -685,6 +922,9 @@ async function loadVocabulary() {
         initSynonymsTab();
         initSettingsTab();
         initCloudTab();
+        
+        // Khởi tạo SRS system
+        SRSManager.loadSRSData();
 
         showToast(`Đã tải ${Object.keys(vocabulary).length} từ vựng thành công!`, 'success');
     } catch (error) {
@@ -780,10 +1020,15 @@ function initLearnTab() {
     var btnTranslation = document.getElementById('task-translation');
     if (btnTranslation) btnTranslation.addEventListener('click', function () {
         switchLearnTask('translation-task');
-    });
-    var btnCompletion = document.getElementById('task-completion');
+    });    var btnCompletion = document.getElementById('task-completion');
     if (btnCompletion) btnCompletion.addEventListener('click', function () {
         switchLearnTask('completion-task');
+    });
+
+    // Event listeners cho SRS task
+    var btnSRS = document.getElementById('task-srs');
+    if (btnSRS) btnSRS.addEventListener('click', function () {
+        switchLearnTask('srs-task');
     });
 
     // Event listeners cho task nghe viết từ
@@ -841,6 +1086,7 @@ function switchLearnTask(taskId) {
     if (taskId === 'dictation-task') btnId = 'task-dictation';
     else if (taskId === 'translation-task') btnId = 'task-translation';
     else if (taskId === 'completion-task') btnId = 'task-completion';
+    else if (taskId === 'srs-task') btnId = 'task-srs';
 
     document.getElementById(btnId).classList.add('active');
     document.getElementById(taskId).classList.add('active-task');
@@ -855,6 +1101,8 @@ function switchLearnTask(taskId) {
         if (completionTask && typeof completionTask.initWords === 'function') {
             completionTask.initWords(wordList);
         }
+    } else if (taskId === 'srs-task') {
+        initSRSSession();
     }
 }
 
@@ -1529,8 +1777,6 @@ function flipFlashcard() {
         frontCard.classList.add('active');
         backCard.classList.remove('active');
     }
-
-    console.log('Đã lật thẻ - phương pháp mới!');
 }
 
 function nextFlashcard() {
@@ -2789,24 +3035,34 @@ function setupCompletionTask() {
     let currentIncompleteWord = '';
     let completionWords = [];
     let currentWordIndex = 0;
-    
-    // Tạo từ không đầy đủ bằng cách thay thế một số chữ cái bằng dấu gạch dưới
+      // Tạo từ không đầy đủ bằng cách thay thế một số chữ cái bằng dấu gạch dưới
     function createIncompleteWord(word) {
         if (!word) return '';
-        const wordLength = word.length;
-        let replacements = Math.floor(wordLength * 0.4); // Thay thế khoảng 40% chữ cái
-        if (replacements < 1) replacements = 1;
-        if (wordLength <= 3) replacements = 1; // Với từ ngắn, chỉ thay 1 chữ
         
-        let indices = [];
+        // Tìm các vị trí chỉ chứa chữ cái (bỏ qua khoảng trắng và ký tự đặc biệt)
+        const letterIndices = [];
+        for (let i = 0; i < word.length; i++) {
+            if (/[a-zA-Z]/.test(word[i])) {
+                letterIndices.push(i);
+            }
+        }
+        
+        if (letterIndices.length === 0) return word; // Nếu không có chữ cái nào
+        
+        // Tính số lượng chữ cái cần thay thế (40% số chữ cái)
+        let replacements = Math.floor(letterIndices.length * 0.4);
+        if (replacements < 1) replacements = 1;
+        if (letterIndices.length <= 3) replacements = 1; // Với từ ngắn, chỉ thay 1 chữ
+        
+        let selectedIndices = [];
         let incompleteWord = word.split('');
         
-        // Tạo mảng chỉ số ngẫu nhiên không trùng lặp để thay thế
-        while (indices.length < replacements && indices.length < wordLength) {
-            const randomIndex = Math.floor(Math.random() * wordLength);
-            if (!indices.includes(randomIndex)) {
-                indices.push(randomIndex);
-                incompleteWord[randomIndex] = '_';
+        // Chọn ngẫu nhiên các vị trí chữ cái để thay thế
+        while (selectedIndices.length < replacements && selectedIndices.length < letterIndices.length) {
+            const randomLetterIndex = letterIndices[Math.floor(Math.random() * letterIndices.length)];
+            if (!selectedIndices.includes(randomLetterIndex)) {
+                selectedIndices.push(randomLetterIndex);
+                incompleteWord[randomLetterIndex] = '_';
             }
         }
         
@@ -3393,164 +3649,315 @@ function restoreFromBackupFile(event) {
     reader.readAsText(file);
 }
 
-// Khởi tạo tab đồng bộ đám mây
-function initCloudTab() {
-    try {
-        // Cập nhật trạng thái kết nối
-        document.getElementById('cloud-connection-status').textContent = isOnline ? 'Đã kết nối' : 'Mất kết nối';
-        document.getElementById('cloud-connection-status').className = isOnline ? 'online' : 'offline';
-        
-        // Tải thông tin xác thực GitHub Gist
-        loadGitHubCredentials();
-        updateGitHubAuthStatus();
-        
-        // Cập nhật thống kê dữ liệu
-        updateDataStatistics();
-        
-        // Đăng ký các sự kiện mạng
-        window.addEventListener('online', function() {
-            isOnline = true;
-            document.getElementById('cloud-connection-status').textContent = 'Đã kết nối';
-            document.getElementById('cloud-connection-status').className = 'online';
-            showToast('Đã kết nối lại mạng!', 'success');
-        });
-        
-        window.addEventListener('offline', function() {
-            isOnline = false;
-            document.getElementById('cloud-connection-status').textContent = 'Mất kết nối';
-            document.getElementById('cloud-connection-status').className = 'offline';
-            showToast('Đã mất kết nối mạng!', 'warning');
-        });
-        
-        // Khởi tạo chức năng sao lưu và khôi phục
-        initBackupFeatures();
-        
-        console.log('Cloud tab initialized successfully.');
-        return true;
-    } catch (error) {
-        console.error('Error initializing cloud tab:', error);
-        return false;
+// SRS Session Management - Giao diện học SRS
+let currentSRSWords = [];
+let currentSRSIndex = 0;
+let srsSession = {
+    totalWords: 0,
+    completedWords: 0,
+    correctWords: 0,
+    showingAnswer: false
+};
+
+// Khởi tạo phiên học SRS
+function initSRSSession() {
+    // Tải dữ liệu SRS
+    SRSManager.loadSRSData();
+    
+    // Lấy từ cần ôn tập
+    currentSRSWords = SRSManager.getDueWords();
+    currentSRSIndex = 0;
+    
+    // Cập nhật thống kê phiên học
+    srsSession.totalWords = currentSRSWords.length;
+    srsSession.completedWords = 0;
+    srsSession.correctWords = 0;
+    srsSession.showingAnswer = false;
+    
+    // Hiển thị từ đầu tiên hoặc thông báo không có từ
+    if (currentSRSWords.length > 0) {
+        showSRSWord();
+        updateSRSProgress();
+        setupSRSEventListeners();
+    } else {
+        showNoWordsMessage();
     }
 }
 
-// Khởi tạo chức năng sao lưu và khôi phục
-function initBackupFeatures() {
-    // Nút tải xuống bản sao lưu
-    document.getElementById('btn-backup-download').addEventListener('click', downloadBackupFile);
-    
-    // Nút khôi phục từ file
-    document.getElementById('btn-backup-restore').addEventListener('click', function() {
-        document.getElementById('backup-file-input').click();
-    });
-    
-    // Xử lý sự kiện khi chọn file khôi phục
-    document.getElementById('backup-file-input').addEventListener('change', restoreFromBackupFile);
-}
-
-// Tải xuống file sao lưu dữ liệu
-function downloadBackupFile() {
-    try {
-        // Chuẩn bị dữ liệu để xuất file
-        const backupData = {
-            vocabulary: vocabulary,
-            wordPackages: wordPackages,
-            wordTopics: wordTopics,
-            wordSynonyms: wordSynonyms,
-            wordExamples: wordExamples,
-            metadata: {
-                version: '1.0',
-                date: new Date().toISOString(),
-                wordCount: Object.keys(vocabulary).length
-            }
-        };
-        
-        // Chuyển đổi thành chuỗi JSON
-        const jsonData = JSON.stringify(backupData, null, 2);
-        
-        // Tạo blob và URL cho download
-        const blob = new Blob([jsonData], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        
-        // Tạo liên kết download và kích hoạt
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = 'vocabulary_backup_' + new Date().toISOString().slice(0, 10) + '.json';
-        
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        
-        // Giải phóng URL object
-        URL.revokeObjectURL(url);
-        
-        showToast('Đã tải xuống bản sao lưu dữ liệu thành công!', 'success');
-    } catch (error) {
-        console.error('Lỗi khi tạo file sao lưu:', error);
-        showToast('Không thể tạo file sao lưu!', 'error');
-    }
-}
-
-// Khôi phục dữ liệu từ file sao lưu
-function restoreFromBackupFile(event) {
-    const file = event.target.files[0];
-    if (!file) return;
-    
-    // Kiểm tra loại file
-    if (file.type !== 'application/json' && !file.name.endsWith('.json')) {
-        showToast('Vui lòng chọn file JSON!', 'warning');
+// Hiển thị từ SRS hiện tại
+function showSRSWord() {
+    if (currentSRSIndex >= currentSRSWords.length) {
+        showSRSSessionComplete();
         return;
     }
     
-    const reader = new FileReader();
+    const currentWordData = currentSRSWords[currentSRSIndex];
+    const word = currentWordData.word;
+    const wordSRSData = srsData[word];
     
-    reader.onload = function(e) {
-        try {
-            const data = JSON.parse(e.target.result);
-            
-            // Kiểm tra tính hợp lệ của dữ liệu
-            if (!data.vocabulary || typeof data.vocabulary !== 'object') {
-                throw new Error('Dữ liệu từ vựng không hợp lệ!');
+    // Cập nhật UI
+    document.getElementById('srs-word').textContent = word;
+    document.getElementById('srs-meaning').textContent = vocabulary[word] || '';
+    
+    // Hiển thị thông tin từ
+    let wordInfo = '';
+    if (currentWordData.isNew) {
+        wordInfo = 'Từ mới';
+    } else if (currentWordData.overdueDays > 0) {
+        wordInfo = `Quá hạn ${currentWordData.overdueDays} ngày`;
+    } else {
+        wordInfo = `Lần thứ ${wordSRSData.repetitions + 1}`;
+    }
+    document.getElementById('srs-word-info').textContent = wordInfo;
+    
+    // Ẩn đáp án và hiện nút "Hiện đáp án"
+    document.getElementById('srs-answer').style.display = 'none';
+    document.getElementById('srs-show-answer').style.display = 'block';
+    document.getElementById('srs-rating-buttons').style.display = 'none';
+    
+    // Hiển thị ví dụ nếu có
+    const example = wordExamples[word];
+    const srsExampleElement = document.getElementById('srs-example');
+    if (example && srsExampleElement) {
+        srsExampleElement.textContent = example;
+        srsExampleElement.style.display = 'block';
+    } else if (srsExampleElement) {
+        srsExampleElement.style.display = 'none';
+    }
+    
+    srsSession.showingAnswer = false;
+    updateSRSProgress();
+}
+
+// Hiển thị đáp án
+function showSRSAnswer() {
+    document.getElementById('srs-answer').style.display = 'block';
+    document.getElementById('srs-show-answer').style.display = 'none';
+    document.getElementById('srs-rating-buttons').style.display = 'grid';
+    
+    // Cập nhật nhãn thời gian cho các nút đánh giá
+    updateSRSButtons();
+    srsSession.showingAnswer = true;
+}
+
+// Cập nhật nhãn thời gian cho các nút đánh giá
+function updateSRSButtons() {
+    const currentWordData = currentSRSWords[currentSRSIndex];
+    const word = currentWordData.word;
+    const wordSRSData = SRSManager.initWord(word);
+    
+    // Tính toán interval cho mỗi mức độ
+    const againInterval = SRSManager.calculateNextInterval(wordSRSData, SRS_DIFFICULTY.AGAIN).interval;
+    const hardInterval = SRSManager.calculateNextInterval(wordSRSData, SRS_DIFFICULTY.HARD).interval;
+    const goodInterval = SRSManager.calculateNextInterval(wordSRSData, SRS_DIFFICULTY.GOOD).interval;
+    const easyInterval = SRSManager.calculateNextInterval(wordSRSData, SRS_DIFFICULTY.EASY).interval;
+    
+    // Cập nhật nhãn
+    document.querySelector('#srs-again small').textContent = formatInterval(againInterval);
+    document.querySelector('#srs-hard small').textContent = formatInterval(hardInterval);
+    document.querySelector('#srs-good small').textContent = formatInterval(goodInterval);
+    document.querySelector('#srs-easy small').textContent = formatInterval(easyInterval);
+}
+
+// Định dạng interval thành text dễ đọc
+function formatInterval(days) {
+    if (days < 1) {
+        const minutes = Math.round(days * 24 * 60);
+        return `${minutes} phút`;
+    } else if (days === 1) {
+        return '1 ngày';
+    } else if (days < 30) {
+        return `${Math.round(days)} ngày`;
+    } else if (days < 365) {
+        const months = Math.round(days / 30);
+        return `${months} tháng`;
+    } else {
+        const years = Math.round(days / 365);
+        return `${years} năm`;
+    }
+}
+
+// Đánh giá từ SRS
+function rateSRSWord(quality) {
+    if (!srsSession.showingAnswer) return;
+    
+    const currentWordData = currentSRSWords[currentSRSIndex];
+    const word = currentWordData.word;
+    
+    // Cập nhật dữ liệu SRS
+    SRSManager.updateWordSRS(word, quality);
+    
+    // Cập nhật thống kê phiên học
+    srsSession.completedWords++;
+    if (quality >= SRS_DIFFICULTY.GOOD) {
+        srsSession.correctWords++;
+    }
+    
+    // Chuyển sang từ tiếp theo
+    currentSRSIndex++;
+    
+    // Hiển thị từ tiếp theo hoặc kết thúc phiên học
+    if (currentSRSIndex < currentSRSWords.length) {
+        showSRSWord();
+    } else {
+        showSRSSessionComplete();
+    }
+}
+
+// Cập nhật thanh tiến trình SRS
+function updateSRSProgress() {
+    const progressText = document.getElementById('srs-progress-text');
+    const progressBar = document.getElementById('srs-progress-bar');
+    
+    if (srsSession.totalWords === 0) {
+        progressText.textContent = 'Không có từ nào cần ôn tập';
+        progressBar.style.width = '100%';
+        return;
+    }
+    
+    const percentage = Math.round((srsSession.completedWords / srsSession.totalWords) * 100);
+    const accuracy = srsSession.completedWords > 0 ? Math.round((srsSession.correctWords / srsSession.completedWords) * 100) : 0;
+    
+    progressText.textContent = `${srsSession.completedWords}/${srsSession.totalWords} từ (${percentage}%) - Độ chính xác: ${accuracy}%`;
+    progressBar.style.width = `${percentage}%`;
+}
+
+// Hiển thị thông báo không có từ cần ôn tập
+function showNoWordsMessage() {
+    document.getElementById('srs-word').textContent = 'Tuyệt vời!';
+    document.getElementById('srs-word-info').textContent = 'Không có từ nào cần ôn tập hôm nay';
+    document.getElementById('srs-answer').style.display = 'none';
+    document.getElementById('srs-show-answer').style.display = 'none';
+    document.getElementById('srs-rating-buttons').style.display = 'none';
+    
+    // Hiển thị nút dashboard
+    const dashboardBtn = document.getElementById('srs-dashboard-btn');
+    if (dashboardBtn) {
+        dashboardBtn.style.display = 'block';
+    }
+    
+    updateSRSProgress();
+}
+
+// Hiển thị kết quả hoàn thành phiên học SRS
+function showSRSSessionComplete() {
+    const accuracy = Math.round((srsSession.correctWords / srsSession.totalWords) * 100);
+    let message = `Hoàn thành phiên học SRS!\n\n`;
+    message += `Đã ôn tập: ${srsSession.totalWords} từ\n`;
+    message += `Trả lời đúng: ${srsSession.correctWords} từ\n`;
+    message += `Độ chính xác: ${accuracy}%`;
+    
+    // Hiển thị thông báo hoàn thành
+    document.getElementById('srs-word').textContent = 'Hoàn thành!';
+    document.getElementById('srs-word-info').textContent = `Đã ôn tập ${srsSession.totalWords} từ với độ chính xác ${accuracy}%`;
+    document.getElementById('srs-answer').style.display = 'none';
+    document.getElementById('srs-show-answer').style.display = 'none';
+    document.getElementById('srs-rating-buttons').style.display = 'none';
+    
+    // Hiển thị nút dashboard và làm mới
+    const dashboardBtn = document.getElementById('srs-dashboard-btn');
+    if (dashboardBtn) {
+        dashboardBtn.style.display = 'block';
+    }
+    
+    showToast(message, 'success');
+    updateSRSProgress();
+}
+
+// Thiết lập event listeners cho SRS
+function setupSRSEventListeners() {
+    // Nút hiện đáp án
+    const showAnswerBtn = document.getElementById('srs-show-answer');
+    if (showAnswerBtn) {
+        showAnswerBtn.removeEventListener('click', showSRSAnswer); // Tránh duplicate
+        showAnswerBtn.addEventListener('click', showSRSAnswer);
+    }
+    
+    // Nút đánh giá
+    const againBtn = document.getElementById('srs-again');
+    const hardBtn = document.getElementById('srs-hard');
+    const goodBtn = document.getElementById('srs-good');
+    const easyBtn = document.getElementById('srs-easy');
+    
+    if (againBtn) {
+        againBtn.removeEventListener('click', () => rateSRSWord(SRS_DIFFICULTY.AGAIN));
+        againBtn.addEventListener('click', () => rateSRSWord(SRS_DIFFICULTY.AGAIN));
+    }
+    
+    if (hardBtn) {
+        hardBtn.removeEventListener('click', () => rateSRSWord(SRS_DIFFICULTY.HARD));
+        hardBtn.addEventListener('click', () => rateSRSWord(SRS_DIFFICULTY.HARD));
+    }
+    
+    if (goodBtn) {
+        goodBtn.removeEventListener('click', () => rateSRSWord(SRS_DIFFICULTY.GOOD));
+        goodBtn.addEventListener('click', () => rateSRSWord(SRS_DIFFICULTY.GOOD));
+    }
+    
+    if (easyBtn) {
+        easyBtn.removeEventListener('click', () => rateSRSWord(SRS_DIFFICULTY.EASY));
+        easyBtn.addEventListener('click', () => rateSRSWord(SRS_DIFFICULTY.EASY));
+    }
+    
+    // Nút dashboard
+    const dashboardBtn = document.getElementById('srs-dashboard-btn');
+    if (dashboardBtn) {
+        dashboardBtn.removeEventListener('click', showSRSDashboard);
+        dashboardBtn.addEventListener('click', showSRSDashboard);
+    }
+    
+    // Phím tắt
+    document.addEventListener('keydown', handleSRSKeyboard);
+}
+
+// Xử lý phím tắt cho SRS
+function handleSRSKeyboard(e) {
+    // Chỉ xử lý khi đang ở SRS task
+    if (!document.getElementById('srs-task').classList.contains('active-task')) return;
+    
+    switch(e.key) {
+        case ' ': // Space - hiện đáp án
+            e.preventDefault();
+            if (!srsSession.showingAnswer) {
+                showSRSAnswer();
             }
-            
-            // Xác nhận từ người dùng trước khi khôi phục
-            const wordCount = Object.keys(data.vocabulary).length;
-            const confirmRestore = confirm(
-                `Bạn có chắc muốn khôi phục ${wordCount} từ vựng từ file này không? ` +
-                'Dữ liệu hiện tại sẽ được ghi đè!'
-            );
-            
-            if (!confirmRestore) {
-                return;
-            }
-            
-            // Khôi phục dữ liệu
-            vocabulary = data.vocabulary || {};
-            wordPackages = data.wordPackages || {};
-            wordTopics = data.wordTopics || {};
-            wordSynonyms = data.wordSynonyms || {};
-            wordExamples = data.wordExamples || {};
-            
-            // Lưu vào localStorage
-            saveAllDataToLocalStorage();
-            
-            // Làm mới giao diện
-            refreshAllViews();
-            
-            showToast(`Đã khôi phục thành công ${wordCount} từ vựng!`, 'success');
-            
-            // Reset input để có thể chọn lại cùng một file
-            event.target.value = '';
-        } catch (error) {
-            console.error('Lỗi khi khôi phục dữ liệu:', error);
-            showToast('Không thể khôi phục từ file này: ' + error.message, 'error');
-            event.target.value = '';
-        }
-    };
+            break;
+        case '1':
+            if (srsSession.showingAnswer) rateSRSWord(SRS_DIFFICULTY.AGAIN);
+            break;
+        case '2':
+            if (srsSession.showingAnswer) rateSRSWord(SRS_DIFFICULTY.HARD);
+            break;
+        case '3':
+            if (srsSession.showingAnswer) rateSRSWord(SRS_DIFFICULTY.GOOD);
+            break;
+        case '4':
+            if (srsSession.showingAnswer) rateSRSWord(SRS_DIFFICULTY.EASY);
+            break;
+    }
+}
+
+// Hiển thị dashboard SRS
+function showSRSDashboard() {
+    const stats = SRSManager.getStatistics();
+    const dueWords = SRSManager.getDueWords();
     
-    reader.onerror = function() {
-        showToast('Lỗi khi đọc file!', 'error');
-        event.target.value = '';
-    };
+    let message = `=== DASHBOARD SRS ===\n\n`;
+    message += `📚 Tổng từ vựng: ${stats.totalWords}\n`;
+    message += `📖 Đã học: ${stats.studiedWords}\n`;
+    message += `🆕 Từ mới: ${stats.newWords}\n`;
+    message += `⏰ Cần ôn tập: ${stats.dueWords}\n`;
+    message += `✅ Đã thành thạo: ${stats.learnedWords}\n`;
+    message += `🎯 Độ chính xác trung bình: ${stats.averageAccuracy}%\n\n`;
     
-    reader.readAsText(file);
+    if (dueWords.length > 0) {
+        message += `🔥 Từ ưu tiên cao nhất:\n`;
+        const topWords = dueWords.slice(0, 5);
+        topWords.forEach((wordData, index) => {
+            const status = wordData.isNew ? 'MỚI' : `QUÁ HẠN ${wordData.overdueDays} NGÀY`;
+            message += `${index + 1}. ${wordData.word} (${status})\n`;
+        });
+    }
+    
+    alert(message);
 }

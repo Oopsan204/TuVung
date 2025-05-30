@@ -52,8 +52,7 @@
                     
                     <!-- Phân chia task học từ vựng -->
                     <div class="practice-task-selection">
-                        <h4>Chọn kiểu luyện tập</h4>
-                        <div class="task-buttons">
+                        <h4>Chọn kiểu luyện tập</h4>                        <div class="task-buttons">
                             <button id="task-dictation" class="btn task-btn active">
                                 <i class="fas fa-headphones"></i> Nghe viết từ
                             </button>
@@ -62,6 +61,9 @@
                             </button>
                             <button id="task-completion" class="btn task-btn">
                                 <i class="fas fa-puzzle-piece"></i> Hoàn thành từ
+                            </button>
+                            <button id="task-srs" class="btn task-btn">
+                                <i class="fas fa-brain"></i> SRS Ôn tập
                             </button>
                         </div>
                     </div>
@@ -109,9 +111,7 @@
                                 <i class="fas fa-lightbulb"></i> Mẹo: Nhấn phím Enter sau khi nhập để kiểm tra từ
                             </div>
                         </div>
-                    </div>
-
-                    <!-- Task 3: Hoàn thành từ -->
+                    </div>                    <!-- Task 3: Hoàn thành từ -->
                     <div class="practice-section" id="completion-task">
                         <div class="practice-card">
                             <h4><i class="fas fa-puzzle-piece"></i> Hoàn thành từ</h4>
@@ -132,6 +132,57 @@
                             </button>
                             <div class="practice-tip">
                                 <i class="fas fa-lightbulb"></i> Mẹo: Nhập từ đầy đủ không có dấu gạch dưới
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Task 4: SRS Ôn tập -->
+                    <div class="practice-section" id="srs-task">
+                        <div class="srs-container">
+                            <div class="srs-progress">
+                                <div id="srs-progress-text">0/0 từ (0%)</div>
+                                <div class="progress-bar-container">
+                                    <div class="progress-bar" id="srs-progress-bar" style="width: 0%"></div>
+                                </div>
+                            </div>
+                            
+                            <div class="srs-card">
+                                <div class="word-info" id="srs-word-info">Từ mới</div>
+                                <div class="srs-word" id="srs-word">Loading...</div>
+                                
+                                <div id="srs-answer" style="display: none;">
+                                    <div class="srs-meaning" id="srs-meaning"></div>
+                                    <div class="srs-example" id="srs-example" style="display: none;"></div>
+                                </div>
+                            </div>
+                            
+                            <div class="srs-controls" id="srs-controls">
+                                <button id="srs-show-answer" class="btn primary">
+                                    <i class="fas fa-eye"></i> Hiện đáp án
+                                </button>
+                                
+                                <div id="srs-rating-buttons" class="srs-rating" style="display: none;">
+                                    <button id="srs-again" class="btn rating again">
+                                        <span>Lại</span>
+                                        <small>10 phút</small>
+                                    </button>
+                                    <button id="srs-hard" class="btn rating hard">
+                                        <span>Khó</span>
+                                        <small>1 ngày</small>
+                                    </button>
+                                    <button id="srs-good" class="btn rating good">
+                                        <span>Tốt</span>
+                                        <small>4 ngày</small>
+                                    </button>
+                                    <button id="srs-easy" class="btn rating easy">
+                                        <span>Dễ</span>
+                                        <small>4 ngày</small>
+                                    </button>
+                                </div>
+                                
+                                <button id="srs-dashboard-btn" class="btn secondary" style="margin-top: 20px;">
+                                    <i class="fas fa-chart-bar"></i> Dashboard
+                                </button>
                             </div>
                         </div>
                     </div>
