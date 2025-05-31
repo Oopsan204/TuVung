@@ -134,11 +134,17 @@
                                 <i class="fas fa-lightbulb"></i> Mẹo: Nhập từ đầy đủ không có dấu gạch dưới
                             </div>
                         </div>
-                    </div>
-
-                    <!-- Task 4: SRS Ôn tập -->
+                    </div>                    <!-- Task 4: SRS Ôn tập -->
                     <div class="practice-section" id="srs-task">
                         <div class="srs-container">
+                            <div class="srs-intro" id="srs-intro">
+                                <h4><i class="fas fa-brain"></i> Hệ thống Lặp lại Ngắt quãng (SRS)</h4>
+                                <p>SRS giúp bạn ghi nhớ từ vựng lâu dài thông qua việc ôn tập theo khoảng thời gian tối ưu.</p>
+                                <button id="start-srs" class="btn primary">
+                                    <i class="fas fa-play"></i> Bắt đầu phiên học SRS
+                                </button>
+                            </div>
+                            
                             <div class="srs-progress">
                                 <div id="srs-progress-text">0/0 từ (0%)</div>
                                 <div class="progress-bar-container">
@@ -185,6 +191,53 @@
                                 </button>
                             </div>
                         </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SRS Dashboard Modal -->
+            <div id="srs-dashboard" class="srs-dashboard">
+                <div class="srs-dashboard-content">
+                    <button class="close-dashboard" id="close-srs-dashboard">
+                        <i class="fas fa-times"></i>
+                    </button>
+                    
+                    <h3><i class="fas fa-chart-bar"></i> Thống kê SRS</h3>
+                    
+                    <div class="srs-stats-grid">
+                        <div class="srs-stat-card">
+                            <h4 id="total-words-stat">0</h4>
+                            <p>Tổng từ vựng</p>
+                        </div>
+                        <div class="srs-stat-card">
+                            <h4 id="studied-words-stat">0</h4>
+                            <p>Đã học</p>
+                        </div>
+                        <div class="srs-stat-card">
+                            <h4 id="new-words-stat">0</h4>
+                            <p>Từ mới</p>
+                        </div>
+                        <div class="srs-stat-card">
+                            <h4 id="due-words-stat">0</h4>
+                            <p>Cần ôn tập</p>
+                        </div>
+                        <div class="srs-stat-card">
+                            <h4 id="learned-words-stat">0</h4>
+                            <p>Đã thành thạo</p>
+                        </div>
+                        <div class="srs-stat-card">
+                            <h4 id="accuracy-stat">0%</h4>
+                            <p>Độ chính xác</p>
+                        </div>
+                    </div>
+                    
+                    <div class="srs-dashboard-actions">
+                        <button class="btn primary" id="reset-srs-data">
+                            <i class="fas fa-refresh"></i> Reset dữ liệu SRS
+                        </button>
+                        <button class="btn secondary" id="export-srs-data">
+                            <i class="fas fa-download"></i> Xuất dữ liệu
+                        </button>
                     </div>
                 </div>
             </div>

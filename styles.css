@@ -1248,266 +1248,6 @@ textarea {
     }
 }
 
-/* Styles for Learn tab */
-.learn-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-    padding-bottom: 10px;
-    border-bottom: 1px solid var(--border-color);
-}
-
-.learn-header h3 {
-    margin: 0;
-}
-
-.learn-config {
-    min-width: 200px;
-}
-
-.current-word-display {
-    text-align: center;
-    margin: 20px auto;
-    perspective: 1000px;
-}
-
-.word-card {
-    background-color: var(--card-bg);
-    border-radius: 10px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    margin: 0 auto;
-    width: 85%;
-    max-width: 350px;
-    padding: 20px;
-    position: relative;
-    transition: all 0.3s ease;
-}
-
-.word-card:hover {
-    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
-    transform: translateY(-5px);
-}
-
-.word-front {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 2rem;
-    font-weight: bold;
-    padding: 20px 10px;
-}
-
-.word-front span {
-    margin-right: 10px;
-}
-
-.word-translation {
-    border-top: 1px dashed var(--border-color);
-    padding-top: 15px;
-    margin-top: 15px;
-    font-size: 1.3rem;
-    color: var(--text-muted);
-}
-
-.learn-progress-container {
-    margin: 15px 0 25px;
-}
-
-.practice-task-selection {
-    margin-bottom: 25px;
-}
-
-.task-buttons {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    margin-top: 10px;
-}
-
-.task-btn {
-    flex: 1;
-    padding: 12px;
-    min-width: 120px;
-    border-radius: 8px;
-    font-weight: normal;
-    background-color: var(--secondary-bg);
-    border: 1px solid var(--border-color);
-    color: var(--text-color);
-    transition: all 0.2s ease;
-}
-
-.task-btn.active {
-    background-color: var(--primary-color);
-    color: white;
-    border-color: var(--primary-color);
-}
-
-.task-btn i {
-    margin-right: 5px;
-}
-
-.practice-section {
-    display: none;
-    margin-bottom: 30px;
-}
-
-.practice-section.active-task {
-    display: block;
-    animation: fadeIn 0.5s;
-}
-
-.practice-card {
-    background-color: var(--card-bg);
-    border-radius: 10px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    padding: 20px;
-    position: relative;
-}
-
-.practice-card h4 {
-    margin-top: 0;
-    margin-bottom: 15px;
-    color: var(--primary-color);
-    border-bottom: 1px solid var(--border-color);
-    padding-bottom: 10px;
-}
-
-.practice-controls {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 15px;
-}
-
-.meaning-display {
-    background-color: var(--secondary-bg);
-    padding: 15px;
-    border-radius: 8px;
-    margin-bottom: 20px;
-    text-align: center;
-}
-
-.meaning-display p {
-    margin: 0;
-    font-size: 0.9rem;
-    color: var(--text-muted);
-}
-
-.meaning-display h3 {
-    margin: 5px 0 0 0;
-    font-size: 1.5rem;
-}
-
-.btn-next {
-    margin-top: 20px;
-    width: 100%;
-}
-
-.practice-tip {
-    margin-top: 15px;
-    padding: 10px;
-    font-size: 0.9rem;
-    color: var(--text-muted);
-    background-color: var(--secondary-bg);
-    border-radius: 6px;
-}
-
-.practice-tip i {
-    color: #ffc107;
-    margin-right: 5px;
-}
-
-/* Quick Flashcard styles */
-.quick-flashcard {
-    position: relative;
-    width: 100%;
-    height: 200px;
-    perspective: 1000px;
-    margin: 20px 0;
-    cursor: pointer;
-}
-
-.quick-flashcard-front, .quick-flashcard-back {
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    backface-visibility: hidden;
-    transition: transform 0.6s;
-    background-color: var(--secondary-bg);
-    border-radius: 10px;
-    padding: 20px;
-    box-sizing: border-box;
-}
-
-.quick-flashcard-front {
-    transform: rotateY(0deg);
-    display: none;
-}
-
-.quick-flashcard-back {
-    transform: rotateY(180deg);
-    display: none;
-}
-
-.quick-flashcard-front.active, .quick-flashcard-back.active {
-    display: flex;
-}
-
-.quick-flashcard h2 {
-    margin: 0 0 20px 0;
-    font-size: 1.8rem;
-}
-
-.quick-flashcard p {
-    font-size: 0.9rem;
-    color: var (--text-muted);
-}
-
-.flashcard-buttons {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    margin-top: 10px;
-    justify-content: center;
-}
-
-/* Animation */
-@keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-}
-
-/* Mobile styles */
-@media (max-width: 768px) {
-    .task-buttons {
-        flex-direction: column;
-    }
-    
-    .task-btn {
-        width: 100%;
-    }
-    
-    .practice-controls {
-        flex-direction: column;
-    }
-    
-    .practice-controls button {
-        width: 100%;
-    }
-    
-    .flashcard-buttons {
-        flex-direction: column;
-    }
-    
-    .flashcard-buttons button {
-        width: 100%;
-    }
-}
-
 /* Styles cho tab Cloud */
 .cloud-section {
     padding: 20px;
@@ -1941,185 +1681,125 @@ body.dark-theme .google-auth:hover {
 .srs-container {
     max-width: 600px;
     margin: 0 auto;
-    padding: 20px;
+}
+
+.srs-intro {
+    text-align: center;
+    padding: 30px;
+    background: var(--card-bg);
+    border-radius: 12px;
+    margin-bottom: 20px;
+}
+
+.srs-intro h4 {
+    color: var(--primary-color);
+    margin-bottom: 15px;
+}
+
+.srs-intro p {
+    color: var(--text-muted);
+    margin-bottom: 25px;
 }
 
 .srs-progress {
-    margin-bottom: 30px;
+    background: var(--card-bg);
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 20px;
     text-align: center;
-}
-
-.srs-progress #srs-progress-text {
-    font-size: 1.1em;
-    color: var(--light-text);
-    margin-bottom: 10px;
 }
 
 .srs-card {
-    background: linear-gradient(135deg, var(--card-bg) 0%, var(--hover-bg) 100%);
-    border-radius: 15px;
-    padding: 40px 30px;
-    margin: 30px 0;
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+    background: var(--card-bg);
+    padding: 30px;
+    border-radius: 12px;
+    margin-bottom: 20px;
     text-align: center;
-    position: relative;
-    transition: all 0.3s ease;
     min-height: 200px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
+    display: none;
 }
 
-.srs-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 12px 35px rgba(0, 0, 0, 0.15);
+.srs-card.active {
+    display: block;
 }
 
 .word-info {
-    position: absolute;
-    top: 15px;
-    right: 20px;
-    background-color: var(--primary-color);
-    color: white;
-    padding: 5px 12px;
-    border-radius: 20px;
-    font-size: 0.8em;
-    font-weight: 600;
-}
-
-.word-info.new {
-    background-color: var(--secondary-color);
-}
-
-.word-info.learning {
-    background-color: #f39c12;
-}
-
-.word-info.review {
-    background-color: var(--primary-color);
-}
-
-.word-info.mature {
-    background-color: #8e44ad;
+    color: var(--text-muted);
+    font-size: 14px;
+    margin-bottom: 10px;
 }
 
 .srs-word {
-    font-size: 3em;
-    font-weight: 700;
+    font-size: 36px;
+    font-weight: bold;
     color: var(--primary-color);
-    margin: 20px 0;
-    letter-spacing: 1px;
-}
-
-#srs-answer {
-    margin-top: 30px;
-    padding-top: 20px;
-    border-top: 2px dashed var(--border-color);
-    animation: fadeInUp 0.5s ease;
+    margin-bottom: 20px;
 }
 
 .srs-meaning {
-    font-size: 1.5em;
+    font-size: 18px;
     color: var(--text-color);
     margin-bottom: 15px;
-    font-weight: 500;
 }
 
 .srs-example {
     font-style: italic;
-    color: var(--light-text);
-    font-size: 1em;
-    margin-top: 15px;
-    padding: 15px;
-    background-color: rgba(52, 152, 219, 0.05);
-    border-left: 4px solid var(--primary-color);
-    border-radius: 4px;
+    color: var(--text-muted);
+    font-size: 16px;
 }
 
 .srs-controls {
     text-align: center;
-    margin-top: 20px;
+    display: none;
+}
+
+.srs-controls.active {
+    display: block;
 }
 
 .srs-rating {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
-    gap: 15px;
-    margin: 20px 0;
-    animation: fadeInUp 0.5s ease;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin-top: 20px;
 }
 
 .btn.rating {
     padding: 15px 10px;
-    border-radius: 12px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+    border-radius: 8px;
     display: flex;
     flex-direction: column;
     align-items: center;
-    transition: all 0.3s ease;
-    position: relative;
-    overflow: hidden;
+    gap: 5px;
 }
 
 .btn.rating span {
-    font-size: 1em;
-    margin-bottom: 5px;
+    font-weight: bold;
 }
 
 .btn.rating small {
-    font-size: 0.75em;
+    font-size: 12px;
     opacity: 0.8;
-    font-weight: normal;
 }
 
 .btn.rating.again {
-    background-color: var(--accent-color);
+    background: #dc3545;
     color: white;
-    border: 2px solid var(--accent-color);
-}
-
-.btn.rating.again:hover {
-    background-color: #c0392b;
-    transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(231, 76, 60, 0.3);
 }
 
 .btn.rating.hard {
-    background-color: #f39c12;
+    background: #fd7e14;
     color: white;
-    border: 2px solid #f39c12;
-}
-
-.btn.rating.hard:hover {
-    background-color: #e67e22;
-    transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(243, 156, 18, 0.3);
 }
 
 .btn.rating.good {
-    background-color: var(--secondary-color);
+    background: #28a745;
     color: white;
-    border: 2px solid var(--secondary-color);
-}
-
-.btn.rating.good:hover {
-    background-color: #27ae60;
-    transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(46, 204, 113, 0.3);
 }
 
 .btn.rating.easy {
-    background-color: var(--primary-color);
+    background: #17a2b8;
     color: white;
-    border: 2px solid var(--primary-color);
-}
-
-.btn.rating.easy:hover {
-    background-color: #2980b9;
-    transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(52, 152, 219, 0.3);
 }
 
 /* SRS Dashboard Styles */
@@ -2202,6 +1882,27 @@ body.dark-theme .google-auth:hover {
     background-color: var(--hover-bg);
 }
 
+.srs-dashboard-actions {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border-color);
+}
+
+.srs-dashboard-actions button {
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.srs-dashboard-actions button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
 /* SRS Session Complete Styles */
 .srs-session-complete {
     text-align: center;
@@ -2248,7 +1949,7 @@ body.dark-theme .google-auth:hover {
 }
 
 /* Animations */
-@keyframes fadeInUp {
+@keyframes fadeIn {
     from {
         opacity: 0;
         transform: translateY(20px);

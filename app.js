@@ -83,6 +83,40 @@ function setupGlobalEventListeners() {
 
     // Phím tắt toàn cục
     document.addEventListener('keydown', handleGlobalKeydown);
+    
+    // Completion task event listeners
+    const checkCompletionBtn = document.getElementById('check-completion');
+    if (checkCompletionBtn) {
+        checkCompletionBtn.addEventListener('click', () => {
+            if (completionTask) {
+                completionTask.checkAnswer();
+            }
+        });
+    }
+    
+    const completionNextBtn = document.getElementById('completion-next');
+    if (completionNextBtn) {
+        completionNextBtn.addEventListener('click', () => {
+            if (completionTask) {
+                completionTask.showNextWord();
+            }
+        });
+    }
+    
+    const completionInput = document.getElementById('completion-input');
+    if (completionInput) {
+        completionInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && completionTask) {
+                completionTask.checkAnswer();
+            }
+        });
+    }
+    
+    // SRS task event listeners
+    const startSRSBtn = document.getElementById('start-srs');
+    if (startSRSBtn) {
+        startSRSBtn.addEventListener('click', startSRSSession);
+    }
 }
 
 // Xử lý phím tắt toàn cục
@@ -207,15 +241,19 @@ function switchLearnTask(taskId) {
     const taskSection = document.getElementById(taskId);
     if (taskSection) {
         taskSection.classList.add('active-task');
-    }
-
-    // Initialize task-specific functionality
+    }    // Initialize task-specific functionality
     switch(taskId) {
         case 'dictation-task':
             LearningManager.dictationTask.init(wordList);
             break;
         case 'translation-task':
             LearningManager.translationTask.init(wordList);
+            break;
+        case 'completion-task':
+            if (!completionTask) {
+                completionTask = LearningManager.completionTask;
+            }
+            completionTask.init(wordList);
             break;
         case 'srs-task':
             initSRSSession();
@@ -358,11 +396,17 @@ function initSynonymsTab() {
 function initSRSTab() {
     // Event listeners for SRS
     document.getElementById('start-srs')?.addEventListener('click', startSRSSession);
-    document.getElementById('show-srs-answer')?.addEventListener('click', showSRSAnswer);
+    document.getElementById('srs-show-answer')?.addEventListener('click', showSRSAnswer);
     document.getElementById('srs-again')?.addEventListener('click', () => rateSRSWord(SRS_DIFFICULTY.AGAIN));
     document.getElementById('srs-hard')?.addEventListener('click', () => rateSRSWord(SRS_DIFFICULTY.HARD));
     document.getElementById('srs-good')?.addEventListener('click', () => rateSRSWord(SRS_DIFFICULTY.GOOD));
     document.getElementById('srs-easy')?.addEventListener('click', () => rateSRSWord(SRS_DIFFICULTY.EASY));
+    
+    // Dashboard event listeners
+    document.getElementById('srs-dashboard-btn')?.addEventListener('click', showSRSDashboard);
+    document.getElementById('close-srs-dashboard')?.addEventListener('click', closeSRSDashboard);
+    document.getElementById('reset-srs-data')?.addEventListener('click', resetSRSData);
+    document.getElementById('export-srs-data')?.addEventListener('click', exportSRSData);
 }
 
 function initDictionaryTab() {
@@ -894,32 +938,78 @@ function autoUpdateSynonyms() {
 }
 
 function startSRSSession() {
-    // Bắt đầu phiên SRS mới
-    initSRSSession();
+    console.log('startSRSSession: Bắt đầu phiên học SRS...');
+    
+    // Lấy danh sách từ cần ôn tập
+    const dueWords = SRSManager.getDueWords();
+    console.log('startSRSSession: Tìm thấy', dueWords.length, 'từ cần ôn tập');
+    
+    if (dueWords.length === 0) {
+        showNoWordsMessage();
+        return;
+    }
+    
+    // Giới hạn số từ trong một phiên học (tối đa 20 từ)
+    currentSRSWords = dueWords.slice(0, 20);
+    currentSRSIndex = 0;
+    
+    // Khởi tạo session
+    srsSession = {
+        totalWords: currentSRSWords.length,
+        completedWords: 0,
+        correctWords: 0,
+        showingAnswer: false
+    };
+    
+    // Hiển thị từ đầu tiên
+    showSRSWord();
+    updateSRSProgress();
+    console.log('startSRSSession: Đã khởi tạo phiên học SRS thành công');
 }
 
 function initSRSSession() {
-    // Tải dữ liệu SRS
-    SRSManager.loadSRSData();
+    console.log('initSRSSession: Khởi tạo giao diện SRS...');
     
-    // Lấy từ cần ôn tập
-    currentSRSWords = SRSManager.getDueWords();
+    // Reset session
+    currentSRSWords = [];
     currentSRSIndex = 0;
+    srsSession = {
+        totalWords: 0,
+        completedWords: 0,
+        correctWords: 0,
+        showingAnswer: false
+    };
     
-    // Cập nhật thống kê phiên học
-    srsSession.totalWords = currentSRSWords.length;
-    srsSession.completedWords = 0;
-    srsSession.correctWords = 0;
-    srsSession.showingAnswer = false;
+    // Hiển thị intro và ẩn các thành phần khác
+    const srsIntro = document.getElementById('srs-intro');
+    const srsCard = document.querySelector('.srs-card');
+    const srsControls = document.getElementById('srs-controls');
     
-    // Hiển thị từ đầu tiên hoặc thông báo không có từ
-    if (currentSRSWords.length > 0) {
-        showSRSWord();
-        updateSRSProgress();
-        setupSRSEventListeners();
-    } else {
-        showNoWordsMessage();
+    if (srsIntro) srsIntro.style.display = 'block';
+    if (srsCard) {
+        srsCard.style.display = 'none';
+        srsCard.classList.remove('active');
     }
+    if (srsControls) {
+        srsControls.style.display = 'none';
+        srsControls.classList.remove('active');
+    }
+    
+    // Ẩn các nút đánh giá
+    const ratingButtons = document.getElementById('srs-rating-buttons');
+    if (ratingButtons) {
+        ratingButtons.style.display = 'none';
+    }
+      // Hiển thị nút show answer
+    const showAnswerBtn = document.getElementById('srs-show-answer');
+    if (showAnswerBtn) {
+        showAnswerBtn.style.display = 'block';
+    }
+    
+    // Reset progress
+    updateSRSProgress();
+    
+    console.log('initSRSSession: Đã khởi tạo giao diện SRS');
 }
 
 // Hiển thị từ SRS hiện tại
@@ -929,13 +1019,31 @@ function showSRSWord() {
         return;
     }
     
-    const currentWordData = currentSRSWords[currentSRSIndex];
+    // Ẩn intro và hiển thị SRS card
+    const srsIntro = document.getElementById('srs-intro');
+    const srsCard = document.querySelector('.srs-card');
+    const srsControls = document.getElementById('srs-controls');
+    
+    if (srsIntro) srsIntro.style.display = 'none';
+    if (srsCard) {
+        srsCard.style.display = 'block';
+        srsCard.classList.add('active');
+    }
+    if (srsControls) {
+        srsControls.style.display = 'block';
+        srsControls.classList.add('active');
+    }
+      const currentWordData = currentSRSWords[currentSRSIndex];
     const word = currentWordData.word;
-    const wordSRSData = srsData[word];
+    const wordSRSData = SRSManager.initWord(word);
     
     // Cập nhật UI
-    document.getElementById('srs-word').textContent = word;
-    document.getElementById('srs-meaning').textContent = vocabulary[word] || '';
+    const srsWordElement = document.getElementById('srs-word');
+    const srsMeaningElement = document.getElementById('srs-meaning');
+    const srsWordInfoElement = document.getElementById('srs-word-info');
+    
+    if (srsWordElement) srsWordElement.textContent = word;
+    if (srsMeaningElement) srsMeaningElement.textContent = vocabulary[word] || '';
     
     // Hiển thị thông tin từ
     let wordInfo = '';
@@ -943,15 +1051,19 @@ function showSRSWord() {
         wordInfo = 'Từ mới';
     } else if (currentWordData.overdueDays > 0) {
         wordInfo = `Quá hạn ${currentWordData.overdueDays} ngày`;
-    } else {
+    } else if (wordSRSData) {
         wordInfo = `Lần thứ ${wordSRSData.repetitions + 1}`;
+    } else {
+        wordInfo = 'Từ mới';
     }
-    document.getElementById('srs-word-info').textContent = wordInfo;
+    if (srsWordInfoElement) srsWordInfoElement.textContent = wordInfo;    // Ẩn đáp án và hiện nút "Hiện đáp án"
+    const srsAnswerElement = document.getElementById('srs-answer');
+    const showAnswerBtn = document.getElementById('srs-show-answer');
+    const ratingButtons = document.getElementById('srs-rating-buttons');
     
-    // Ẩn đáp án và hiện nút "Hiện đáp án"
-    document.getElementById('srs-answer').style.display = 'none';
-    document.getElementById('srs-show-answer').style.display = 'block';
-    document.getElementById('srs-rating-buttons').style.display = 'none';
+    if (srsAnswerElement) srsAnswerElement.style.display = 'none';
+    if (showAnswerBtn) showAnswerBtn.style.display = 'block';
+    if (ratingButtons) ratingButtons.style.display = 'none';
     
     // Hiển thị ví dụ nếu có
     const example = wordExamples[word];
@@ -1009,8 +1121,7 @@ function showSRSSessionComplete() {
     message += `Đã ôn tập: ${srsSession.totalWords} từ\n`;
     message += `Trả lời đúng: ${srsSession.correctWords} từ\n`;
     message += `Độ chính xác: ${accuracy}%`;
-    
-    // Hiển thị thông báo hoàn thành
+      // Hiển thị thông báo hoàn thành
     document.getElementById('srs-word').textContent = 'Hoàn thành!';
     document.getElementById('srs-word-info').textContent = `Độ chính xác: ${accuracy}%`;
     document.getElementById('srs-answer').style.display = 'none';
@@ -1133,7 +1244,75 @@ function resetSettings() {
     UIManager.showToast('Đã khôi phục cài đặt mặc định!', 'info');
 }
 
-// ============= APPLICATION STARTUP =============
+// ============= SRS DASHBOARD FUNCTIONS =============
+
+function showSRSDashboard() {
+    console.log('showSRSDashboard: Opening SRS dashboard...');
+    
+    // Get statistics from SRS Manager
+    const stats = SRSManager.getStatistics();
+    
+    // Update dashboard elements
+    document.getElementById('total-words-stat').textContent = stats.totalWords;
+    document.getElementById('studied-words-stat').textContent = stats.studiedWords;
+    document.getElementById('new-words-stat').textContent = stats.newWords;
+    document.getElementById('due-words-stat').textContent = stats.dueWords;
+    document.getElementById('learned-words-stat').textContent = stats.learnedWords;
+    document.getElementById('accuracy-stat').textContent = stats.averageAccuracy + '%';
+    
+    // Show dashboard
+    const dashboard = document.getElementById('srs-dashboard');
+    if (dashboard) {
+        dashboard.style.display = 'flex';
+    }
+    
+    console.log('showSRSDashboard: Dashboard opened with stats:', stats);
+}
+
+function closeSRSDashboard() {
+    console.log('closeSRSDashboard: Closing SRS dashboard...');
+    const dashboard = document.getElementById('srs-dashboard');
+    if (dashboard) {
+        dashboard.style.display = 'none';
+    }
+}
+
+function resetSRSData() {
+    const confirmReset = confirm('Bạn có chắc muốn reset tất cả dữ liệu SRS không? Thao tác này không thể hoàn tác!');
+    if (!confirmReset) return;
+    
+    SRSManager.resetAllData();
+    UIManager.showToast('Đã reset tất cả dữ liệu SRS!', 'success');
+    
+    // Update dashboard if it's open
+    const dashboard = document.getElementById('srs-dashboard');
+    if (dashboard && dashboard.style.display === 'flex') {
+        showSRSDashboard(); // Refresh the dashboard
+    }
+}
+
+function exportSRSData() {
+    try {
+        const data = SRSManager.exportData();
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `srs_data_${new Date().toISOString().split('T')[0]}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        UIManager.showToast('Đã xuất dữ liệu SRS thành công!', 'success');
+    } catch (error) {
+        console.error('Error exporting SRS data:', error);
+        UIManager.showToast('Có lỗi khi xuất dữ liệu SRS!', 'error');
+    }
+}
+
+// ============= EXISTING FUNCTIONS =============
 
 // Khởi động ứng dụng khi DOM đã sẵn sàng
 document.addEventListener('DOMContentLoaded', init);

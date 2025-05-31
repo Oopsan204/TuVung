@@ -198,7 +198,7 @@ const LearningManager = {
     // Task xem nghĩa viết từ (Translation)
     translationTask: {
         currentWord: null,
-
+        
         init(wordList) {
             this.currentWord = null;
             if (wordList && wordList.length > 0) {
@@ -282,6 +282,131 @@ const LearningManager = {
         }
     },
 
+    // Task hoàn thành từ (Completion)
+    completionTask: {
+        currentWord: null,
+        incompleteWord: '',
+        
+        init(wordList) {
+            this.currentWord = null;
+            if (wordList && wordList.length > 0) {
+                LearningManager.initializeWordList(wordList);
+                this.showNextWord();
+            }
+        },
+
+        showNextWord() {
+            this.currentWord = LearningManager.getCurrentWord();
+            this.generateIncompleteWord();
+            this.showIncompleteWord();
+            this.showHint();
+            this.clearInput();
+            this.clearResult();
+            LearningManager.updateProgress();
+        },
+
+        generateIncompleteWord() {
+            if (!this.currentWord || this.currentWord.length < 3) {
+                this.incompleteWord = this.currentWord;
+                return;
+            }
+
+            let word = this.currentWord.toLowerCase();
+            let incomplete = '';
+            
+            // Giữ lại chữ cái đầu và cuối, ẩn một số chữ cái ở giữa
+            for (let i = 0; i < word.length; i++) {
+                if (i === 0 || i === word.length - 1) {
+                    // Giữ chữ cái đầu và cuối
+                    incomplete += word[i];
+                } else if (word.length > 5 && Math.random() < 0.4) {
+                    // Với từ dài, ẩn khoảng 40% chữ cái ở giữa
+                    incomplete += '_';
+                } else if (word.length <= 5 && Math.random() < 0.3) {
+                    // Với từ ngắn, ẩn khoảng 30% chữ cái ở giữa
+                    incomplete += '_';
+                } else {
+                    incomplete += word[i];
+                }
+            }
+            
+            // Đảm bảo có ít nhất 1 chữ cái bị ẩn
+            if (incomplete === word) {
+                const middleIndex = Math.floor(word.length / 2);
+                incomplete = incomplete.substring(0, middleIndex) + '_' + incomplete.substring(middleIndex + 1);
+            }
+            
+            this.incompleteWord = incomplete;
+        },
+
+        showIncompleteWord() {
+            const incompleteElement = document.getElementById('incomplete-word');
+            if (incompleteElement) {
+                incompleteElement.textContent = this.incompleteWord;
+            }
+        },
+
+        showHint() {
+            const hintElement = document.getElementById('word-hint-text');
+            if (hintElement && this.currentWord) {
+                hintElement.textContent = LearningManager.getCurrentMeaning();
+            }
+        },
+
+        clearInput() {
+            const input = document.getElementById('completion-input');
+            if (input) input.value = '';
+        },
+
+        clearResult() {
+            const result = document.getElementById('completion-result');
+            if (result) {
+                result.innerHTML = '';
+                result.className = 'result-box';
+            }
+        },
+
+        checkAnswer() {
+            const input = document.getElementById('completion-input');
+            const result = document.getElementById('completion-result');
+            
+            if (!input || !result || !this.currentWord) return;
+
+            const userInput = input.value.trim().toLowerCase();
+            const correctWord = this.currentWord.toLowerCase();
+
+            if (userInput === '') {
+                result.textContent = 'Vui lòng nhập từ đầy đủ!';
+                result.className = 'result-box';
+                return;
+            }
+
+            if (userInput === correctWord) {
+                result.textContent = '✓ Chính xác!';
+                result.className = 'result-box correct';
+                LearningManager.markWordAsLearned(this.currentWord);
+                
+                if (window.AudioManager) {
+                    window.AudioManager.playCorrectSound();
+                }
+            } else {
+                result.textContent = `✗ Không chính xác! Từ đúng là "${this.currentWord}".`;
+                result.className = 'result-box incorrect';
+                
+                if (window.AudioManager) {
+                    window.AudioManager.playIncorrectSound();
+                }
+            }
+
+            LearningManager.updateProgress();
+        },
+
+        nextWord() {
+            LearningManager.nextWord();
+            this.showNextWord();
+        }
+    },
+
     // Thiết lập event listeners
     setupEventListeners() {
         // Dictation task events
@@ -343,6 +468,30 @@ const LearningManager = {
         if (wordSpeakBtn) {
             wordSpeakBtn.addEventListener('click', () => {
                 this.translationTask.speakCurrentWord();
+            });
+        }
+
+        // Completion task events
+        const checkCompletionBtn = document.getElementById('check-completion');
+        if (checkCompletionBtn) {
+            checkCompletionBtn.addEventListener('click', () => {
+                this.completionTask.checkAnswer();
+            });
+        }
+
+        const completionNextBtn = document.getElementById('completion-next');
+        if (completionNextBtn) {
+            completionNextBtn.addEventListener('click', () => {
+                this.completionTask.nextWord();
+            });
+        }
+
+        const completionInput = document.getElementById('completion-input');
+        if (completionInput) {
+            completionInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    this.completionTask.checkAnswer();
+                }
             });
         }
     }
