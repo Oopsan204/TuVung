@@ -37,14 +37,36 @@ const QuizManager = {
         if (closeDetailsBtn) {
             closeDetailsBtn.addEventListener('click', () => this.closeQuizDetails());
         }
-    },
-
-    // Bắt đầu quiz
+    },    // Bắt đầu quiz
     startQuiz() {
-        const numQuestions = parseInt(document.getElementById('quiz-questions').value) || 10;
-        const questionType = document.getElementById('quiz-type').value || 'mixed';
+        const numQuestions = parseInt(document.getElementById('quiz-count').value) || 10;
+        const quizTypeRadio = document.querySelector('input[name="quiz-type"]:checked');
+        const questionType = quizTypeRadio ? quizTypeRadio.value : 'eng_to_viet';
+        const selectedPackage = document.getElementById('quiz-package')?.value || 'all';
 
-        this.generateQuestions(numQuestions, questionType);
+        // Get vocabulary based on selected package
+        let vocabularyToUse = {};
+        if (selectedPackage === 'all') {
+            vocabularyToUse = window.vocabulary || {};
+        } else if (window.wordPackages && window.wordPackages[selectedPackage]) {
+            // Package selected
+            const packageWords = window.wordPackages[selectedPackage];
+            for (const word of packageWords) {
+                if (window.vocabulary && window.vocabulary[word]) {
+                    vocabularyToUse[word] = window.vocabulary[word];
+                }
+            }
+        } else if (window.wordTopics && window.wordTopics[selectedPackage]) {
+            // Topic selected
+            const topicWords = window.wordTopics[selectedPackage];
+            for (const word of topicWords) {
+                if (window.vocabulary && window.vocabulary[word]) {
+                    vocabularyToUse[word] = window.vocabulary[word];
+                }
+            }
+        }
+
+        this.generateQuestions(numQuestions, questionType, vocabularyToUse);
         this.currentQuestion = 0;
         this.selectedAnswer = null;
         this.answers = [];
@@ -52,13 +74,12 @@ const QuizManager = {
 
         this.showQuizInterface();
         this.showQuestion();
-    },
+    },    // Tạo câu hỏi
+    generateQuestions(numQuestions, questionType, vocabularyToUse = null) {
+        const vocabulary = vocabularyToUse || window.vocabulary;
+        if (!vocabulary) return;
 
-    // Tạo câu hỏi
-    generateQuestions(numQuestions, questionType) {
-        if (!window.vocabulary) return;
-
-        const words = Object.keys(window.vocabulary);
+        const words = Object.keys(vocabulary);
         if (words.length < 4) {
             if (window.UIManager) {
                 window.UIManager.showToast('Cần ít nhất 4 từ vựng để tạo quiz!', 'warning');
@@ -69,7 +90,9 @@ const QuizManager = {
         this.questions = [];
         const usedWords = new Set();
 
-        for (let i = 0; i < Math.min(numQuestions, words.length); i++) {
+        const questionCount = numQuestions === 'all' ? words.length : Math.min(parseInt(numQuestions), words.length);
+
+        for (let i = 0; i < questionCount; i++) {
             let randomWord;
             do {
                 randomWord = words[Math.floor(Math.random() * words.length)];
@@ -77,17 +100,15 @@ const QuizManager = {
 
             usedWords.add(randomWord);
 
-            const question = this.createQuestion(randomWord, questionType, words);
+            const question = this.createQuestion(randomWord, questionType, words, vocabulary);
             if (question) {
                 this.questions.push(question);
             }
         }
-    },
-
-    // Tạo một câu hỏi
-    createQuestion(word, questionType, allWords) {
-        const correctAnswer = window.vocabulary[word];
-        const isEngToViet = questionType === 'mixed' ? Math.random() > 0.5 : questionType === 'eng-to-viet';
+    },    // Tạo một câu hỏi
+    createQuestion(word, questionType, allWords, vocabulary) {
+        const correctAnswer = vocabulary[word];
+        const isEngToViet = questionType === 'mixed' ? Math.random() > 0.5 : questionType === 'eng_to_viet';
         
         // Tạo các đáp án sai
         const wrongAnswers = [];
@@ -96,7 +117,7 @@ const QuizManager = {
         while (wrongAnswers.length < 3 && otherWords.length > 0) {
             const randomIndex = Math.floor(Math.random() * otherWords.length);
             const wrongWord = otherWords[randomIndex];
-            const wrongAnswer = isEngToViet ? window.vocabulary[wrongWord] : wrongWord;
+            const wrongAnswer = isEngToViet ? vocabulary[wrongWord] : wrongWord;
             
             if (!wrongAnswers.includes(wrongAnswer) && wrongAnswer !== correctAnswer) {
                 wrongAnswers.push(wrongAnswer);
@@ -127,13 +148,11 @@ const QuizManager = {
             const j = Math.floor(Math.random() * (i + 1));
             [array[i], array[j]] = [array[j], array[i]];
         }
-    },
-
-    // Hiển thị giao diện quiz
+    },    // Hiển thị giao diện quiz
     showQuizInterface() {
         const configSection = document.querySelector('.quiz-config');
-        const questionSection = document.querySelector('.quiz-question');
-        const resultSection = document.querySelector('.quiz-result');
+        const questionSection = document.querySelector('.quiz-question-section');
+        const resultSection = document.querySelector('.quiz-result-section');
 
         if (configSection) configSection.style.display = 'none';
         if (questionSection) questionSection.style.display = 'block';
@@ -158,9 +177,7 @@ const QuizManager = {
         const questionNumber = document.getElementById('question-number');
         if (questionNumber) {
             questionNumber.textContent = `Câu hỏi ${this.currentQuestion + 1}/${this.questions.length}`;
-        }
-
-        // Hiển thị các đáp án
+        }        // Hiển thị các đáp án
         const optionsContainer = document.getElementById('quiz-options');
         if (optionsContainer) {
             optionsContainer.innerHTML = '';
@@ -169,8 +186,9 @@ const QuizManager = {
                 const optionElement = document.createElement('div');
                 optionElement.className = 'quiz-option';
                 optionElement.innerHTML = `
-                    <input type="radio" name="quiz-answer" value="${index}" id="option-${index}">
-                    <label for="option-${index}">${option}</label>
+                    <div class="radio-circle"></div>
+                    <span>${option}</span>
+                    <input type="radio" name="quiz-answer" value="${index}" id="option-${index}" style="display: none;">
                 `;
                 
                 optionElement.addEventListener('click', () => this.selectOption(index));
@@ -180,9 +198,7 @@ const QuizManager = {
 
         this.selectedAnswer = null;
         this.updateNextButton();
-    },
-
-    // Chọn đáp án
+    },    // Chọn đáp án
     selectOption(index) {
         this.selectedAnswer = index;
         
@@ -191,32 +207,50 @@ const QuizManager = {
         options.forEach((option, i) => {
             if (i === index) {
                 option.classList.add('selected');
-                option.querySelector('input').checked = true;
+                const radioInput = option.querySelector('input');
+                if (radioInput) radioInput.checked = true;
             } else {
                 option.classList.remove('selected');
-                option.querySelector('input').checked = false;
+                const radioInput = option.querySelector('input');
+                if (radioInput) radioInput.checked = false;
             }
         });
 
         this.updateNextButton();
-    },
-
-    // Cập nhật nút Next
+    },// Cập nhật nút Next
     updateNextButton() {
         const nextBtn = document.getElementById('next-question');
         const submitBtn = document.getElementById('submit-quiz');
         
         if (this.selectedAnswer !== null) {
             if (this.currentQuestion === this.questions.length - 1) {
-                if (nextBtn) nextBtn.style.display = 'none';
-                if (submitBtn) submitBtn.style.display = 'inline-block';
+                if (nextBtn) {
+                    nextBtn.style.display = 'none';
+                    nextBtn.disabled = true;
+                }
+                if (submitBtn) {
+                    submitBtn.style.display = 'inline-block';
+                    submitBtn.disabled = false;
+                }
             } else {
-                if (nextBtn) nextBtn.style.display = 'inline-block';
-                if (submitBtn) submitBtn.style.display = 'none';
+                if (nextBtn) {
+                    nextBtn.style.display = 'inline-block';
+                    nextBtn.disabled = false;
+                }
+                if (submitBtn) {
+                    submitBtn.style.display = 'none';
+                    submitBtn.disabled = true;
+                }
             }
         } else {
-            if (nextBtn) nextBtn.style.display = 'none';
-            if (submitBtn) submitBtn.style.display = 'none';
+            if (nextBtn) {
+                nextBtn.style.display = 'none';
+                nextBtn.disabled = true;
+            }
+            if (submitBtn) {
+                submitBtn.style.display = 'none';
+                submitBtn.disabled = true;
+            }
         }
     },
 
@@ -246,13 +280,11 @@ const QuizManager = {
     submitQuiz() {
         this.nextQuestion(); // Lưu câu trả lời cuối
         this.showResults();
-    },
-
-    // Hiển thị kết quả
+    },    // Hiển thị kết quả
     showResults() {
         const configSection = document.querySelector('.quiz-config');
-        const questionSection = document.querySelector('.quiz-question');
-        const resultSection = document.querySelector('.quiz-result');
+        const questionSection = document.querySelector('.quiz-question-section');
+        const resultSection = document.querySelector('.quiz-result-section');
 
         if (configSection) configSection.style.display = 'none';
         if (questionSection) questionSection.style.display = 'none';
@@ -275,13 +307,17 @@ const QuizManager = {
             else if (percentage >= 60) grade = 'Trung bình';
             
             gradeElement.textContent = grade;
-        }
-
-        // Hiển thị nút "Làm lại"
+        }        // Hiển thị nút "Làm lại" và "Xem chi tiết"
         const retryBtn = document.getElementById('retry-quiz');
         if (retryBtn) {
             retryBtn.style.display = 'inline-block';
             retryBtn.onclick = () => this.resetQuiz();
+        }
+
+        const viewDetailsBtn = document.getElementById('view-details');
+        if (viewDetailsBtn) {
+            viewDetailsBtn.disabled = false;
+            viewDetailsBtn.style.display = 'inline-block';
         }
     },
 
@@ -316,17 +352,26 @@ const QuizManager = {
         if (dialog) {
             dialog.style.display = 'none';
         }
-    },
-
-    // Reset quiz
+    },    // Reset quiz
     resetQuiz() {
         const configSection = document.querySelector('.quiz-config');
-        const questionSection = document.querySelector('.quiz-question');
-        const resultSection = document.querySelector('.quiz-result');
+        const questionSection = document.querySelector('.quiz-question-section');
+        const resultSection = document.querySelector('.quiz-result-section');
 
         if (configSection) configSection.style.display = 'block';
         if (questionSection) questionSection.style.display = 'none';
         if (resultSection) resultSection.style.display = 'none';
+
+        // Reset buttons
+        const viewDetailsBtn = document.getElementById('view-details');
+        if (viewDetailsBtn) {
+            viewDetailsBtn.disabled = true;
+        }
+
+        const retryBtn = document.getElementById('retry-quiz');
+        if (retryBtn) {
+            retryBtn.style.display = 'none';
+        }
 
         this.questions = [];
         this.currentQuestion = 0;

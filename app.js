@@ -368,6 +368,28 @@ function initFlashcardTab() {
 }
 
 function initQuizTab() {
+    // Initialize the package dropdown
+    const quizPackage = document.getElementById('quiz-package');
+    if (quizPackage) {
+        quizPackage.innerHTML = '<option value="all">Tất cả từ vựng</option>';
+
+        // Add word packages
+        for (const pack in wordPackages) {
+            const option = document.createElement('option');
+            option.value = pack;
+            option.textContent = pack;
+            quizPackage.appendChild(option);
+        }
+
+        // Add topics
+        for (const topic in wordTopics) {
+            const option = document.createElement('option');
+            option.value = topic;
+            option.textContent = `Chủ đề: ${topic}`;
+            quizPackage.appendChild(option);
+        }
+    }
+
     QuizManager.init();
 }
 
