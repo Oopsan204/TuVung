@@ -1,0 +1,331 @@
+// Module quản lý Cloud/GitHub Gist
+const CloudManager = {
+    token: '',
+    gistId: '',
+
+    // Khởi tạo
+    init() {
+        this.loadSettings();
+        this.setupEventListeners();
+        this.updateAuthStatus();
+    },
+
+    // Tải cài đặt từ localStorage
+    loadSettings() {
+        this.token = localStorage.getItem('githubToken') || '';
+        this.gistId = localStorage.getItem('gistId') || '';
+    },
+
+    // Lưu cài đặt
+    saveSettings() {
+        localStorage.setItem('githubToken', this.token);
+        localStorage.setItem('gistId', this.gistId);
+    },
+
+    // Thiết lập event listeners
+    setupEventListeners() {
+        const loginBtn = document.getElementById('github-login');
+        if (loginBtn) {
+            loginBtn.addEventListener('click', () => this.showLoginDialog());
+        }
+
+        const logoutBtn = document.getElementById('github-logout');
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', () => this.logout());
+        }
+
+        const saveTokenBtn = document.getElementById('save-token');
+        if (saveTokenBtn) {
+            saveTokenBtn.addEventListener('click', () => this.saveToken());
+        }
+
+        const uploadBtn = document.getElementById('upload-data');
+        if (uploadBtn) {
+            uploadBtn.addEventListener('click', () => this.uploadData());
+        }
+
+        const downloadBtn = document.getElementById('download-data');
+        if (downloadBtn) {
+            downloadBtn.addEventListener('click', () => this.downloadData());
+        }
+
+        const syncBtn = document.getElementById('sync-data');
+        if (syncBtn) {
+            syncBtn.addEventListener('click', () => this.syncData());
+        }
+
+        const closeTokenDialog = document.getElementById('close-token-dialog');
+        if (closeTokenDialog) {
+            closeTokenDialog.addEventListener('click', () => this.hideLoginDialog());
+        }
+    },
+
+    // Hiển thị dialog đăng nhập
+    showLoginDialog() {
+        const dialog = document.getElementById('github-token-dialog');
+        if (dialog) {
+            dialog.style.display = 'block';
+        }
+    },
+
+    // Ẩn dialog đăng nhập
+    hideLoginDialog() {
+        const dialog = document.getElementById('github-token-dialog');
+        if (dialog) {
+            dialog.style.display = 'none';
+        }
+    },
+
+    // Lưu token
+    saveToken() {
+        const tokenInput = document.getElementById('github-token');
+        if (!tokenInput) return;
+
+        const token = tokenInput.value.trim();
+        if (!token) {
+            if (window.UIManager) {
+                window.UIManager.showToast('Vui lòng nhập GitHub Token!', 'warning');
+            }
+            return;
+        }
+
+        this.token = token;
+        this.saveSettings();
+        this.hideLoginDialog();
+        this.updateAuthStatus();
+        
+        if (window.UIManager) {
+            window.UIManager.showToast('Đã lưu GitHub Token thành công!', 'success');
+        }
+    },
+
+    // Đăng xuất
+    logout() {
+        this.token = '';
+        this.gistId = '';
+        localStorage.removeItem('githubToken');
+        localStorage.removeItem('gistId');
+        this.updateAuthStatus();
+        
+        if (window.UIManager) {
+            window.UIManager.showToast('Đã đăng xuất khỏi GitHub!', 'info');
+        }
+    },
+
+    // Cập nhật trạng thái xác thực
+    updateAuthStatus() {
+        if (window.UIManager) {
+            window.UIManager.updateGitHubAuthStatus();
+        }
+    },
+
+    // Upload dữ liệu lên GitHub Gist
+    async uploadData() {
+        if (!this.token) {
+            if (window.UIManager) {
+                window.UIManager.showToast('Vui lòng đăng nhập GitHub trước!', 'warning');
+            }
+            return;
+        }
+
+        try {
+            const data = this.prepareDataForUpload();
+            let response;
+
+            if (this.gistId) {
+                // Cập nhật Gist có sẵn
+                response = await this.updateGist(data);
+            } else {
+                // Tạo Gist mới
+                response = await this.createGist(data);
+            }
+
+            if (response.ok) {
+                const result = await response.json();
+                this.gistId = result.id;
+                this.saveSettings();
+                
+                if (window.UIManager) {
+                    window.UIManager.showToast('Đã upload dữ liệu thành công!', 'success');
+                    window.UIManager.updateDataStatistics();
+                }
+            } else {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+        } catch (error) {
+            console.error('Lỗi upload:', error);
+            if (window.UIManager) {
+                window.UIManager.showToast('Lỗi khi upload dữ liệu!', 'error');
+            }
+        }
+    },
+
+    // Download dữ liệu từ GitHub Gist
+    async downloadData() {
+        if (!this.token || !this.gistId) {
+            if (window.UIManager) {
+                window.UIManager.showToast('Vui lòng đăng nhập và có Gist ID!', 'warning');
+            }
+            return;
+        }
+
+        try {
+            const response = await fetch(`https://api.github.com/gists/${this.gistId}`, {
+                headers: {
+                    'Authorization': `token ${this.token}`,
+                    'Accept': 'application/vnd.github.v3+json'
+                }
+            });
+
+            if (response.ok) {
+                const gist = await response.json();
+                await this.loadDataFromGist(gist);
+                
+                if (window.UIManager) {
+                    window.UIManager.showToast('Đã download dữ liệu thành công!', 'success');
+                    window.UIManager.updateDataStatistics();
+                }
+            } else {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+        } catch (error) {
+            console.error('Lỗi download:', error);
+            if (window.UIManager) {
+                window.UIManager.showToast('Lỗi khi download dữ liệu!', 'error');
+            }
+        }
+    },
+
+    // Đồng bộ dữ liệu
+    async syncData() {
+        await this.downloadData();
+        await this.uploadData();
+    },
+
+    // Chuẩn bị dữ liệu để upload
+    prepareDataForUpload() {
+        return {
+            vocabulary_data: JSON.stringify(window.vocabulary || {}, null, 2),
+            word_packages: JSON.stringify(window.wordPackages || {}, null, 2),
+            word_topics: JSON.stringify(window.wordTopics || {}, null, 2),
+            word_synonyms: JSON.stringify(window.wordSynonyms || {}, null, 2),
+            srs_data: JSON.stringify(window.srsData || {}, null, 2),
+            metadata: JSON.stringify({
+                lastUpdated: new Date().toISOString(),
+                deviceInfo: navigator.userAgent,
+                wordCount: Object.keys(window.vocabulary || {}).length,
+                topicCount: Object.keys(window.wordTopics || {}).length,
+                version: '1.0.0'
+            }, null, 2)
+        };
+    },
+
+    // Tạo Gist mới
+    async createGist(data) {
+        const files = {};
+        Object.keys(data).forEach(key => {
+            files[`${key}.json`] = { content: data[key] };
+        });
+
+        return fetch('https://api.github.com/gists', {
+            method: 'POST',
+            headers: {
+                'Authorization': `token ${this.token}`,
+                'Accept': 'application/vnd.github.v3+json',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                description: `Dữ liệu từ vựng tiếng Anh - TuVung App (${new Date().toLocaleString()})`,
+                public: false,
+                files: files
+            })
+        });
+    },
+
+    // Cập nhật Gist
+    async updateGist(data) {
+        const files = {};
+        Object.keys(data).forEach(key => {
+            files[`${key}.json`] = { content: data[key] };
+        });
+
+        return fetch(`https://api.github.com/gists/${this.gistId}`, {
+            method: 'PATCH',
+            headers: {
+                'Authorization': `token ${this.token}`,
+                'Accept': 'application/vnd.github.v3+json',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                description: `Dữ liệu từ vựng tiếng Anh - TuVung App (Cập nhật: ${new Date().toLocaleString()})`,
+                files: files
+            })
+        });
+    },
+
+    // Tải dữ liệu từ Gist
+    async loadDataFromGist(gist) {
+        try {
+            const files = gist.files;
+            
+            if (files['vocabulary_data.json']) {
+                const vocabulary = JSON.parse(files['vocabulary_data.json'].content);
+                if (window.VocabularyManager) {
+                    window.VocabularyManager.data.vocabulary = vocabulary;
+                }
+            }
+
+            if (files['word_packages.json']) {
+                const wordPackages = JSON.parse(files['word_packages.json'].content);
+                if (window.VocabularyManager) {
+                    window.VocabularyManager.data.wordPackages = wordPackages;
+                }
+            }
+
+            if (files['word_topics.json']) {
+                const wordTopics = JSON.parse(files['word_topics.json'].content);
+                if (window.VocabularyManager) {
+                    window.VocabularyManager.data.wordTopics = wordTopics;
+                }
+            }
+
+            if (files['word_synonyms.json']) {
+                const wordSynonyms = JSON.parse(files['word_synonyms.json'].content);
+                if (window.VocabularyManager) {
+                    window.VocabularyManager.data.wordSynonyms = wordSynonyms;
+                }
+            }
+
+            if (files['srs_data.json']) {
+                const srsData = JSON.parse(files['srs_data.json'].content);
+                window.srsData = srsData;
+                if (window.SRSManager) {
+                    window.SRSManager.saveSRSData();
+                }
+            }
+
+            // Cập nhật VocabularyManager và biến toàn cục
+            if (window.VocabularyManager) {
+                window.VocabularyManager.saveToLocalStorage();
+                window.VocabularyManager.updateGlobalVariables();
+            }
+
+        } catch (error) {
+            console.error('Lỗi khi xử lý dữ liệu từ Gist:', error);
+            throw error;
+        }
+    },
+
+    // Kiểm tra kết nối mạng
+    isOnline() {
+        return navigator.onLine;
+    },
+
+    // Lấy thông tin kết nối
+    getConnectionStatus() {
+        return this.isOnline() ? 'online' : 'offline';
+    }
+};
+
+// Export CloudManager
+window.CloudManager = CloudManager;
