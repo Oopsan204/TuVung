@@ -230,9 +230,7 @@ const VocabularyManager = {
         window.wordTopics = wordTopics;
         window.wordSynonyms = wordSynonyms;
         window.wordExamples = wordExamples;
-    },
-
-    // Thêm từ mới
+    },    // Thêm từ mới
     addWord(english, vietnamese, topic = null, examples = null) {
         this.data.vocabulary[english] = vietnamese;
         
@@ -248,20 +246,31 @@ const VocabularyManager = {
         
         this.saveToLocalStorage();
         this.updateGlobalVariables();
-    },
-
-    // Specific save functions
+        
+        // Tự động đồng bộ nếu bật
+        if (window.CloudManager) {
+            window.CloudManager.autoSyncData();
+        }
+    },    // Specific save functions
     saveTopics() {
         localStorage.setItem('wordTopics', JSON.stringify(this.data.wordTopics));
         this.updateGlobalVariables();
+        
+        // Tự động đồng bộ nếu bật
+        if (window.CloudManager) {
+            window.CloudManager.autoSyncData();
+        }
     },
 
     saveSynonyms() {
         localStorage.setItem('wordSynonyms', JSON.stringify(this.data.wordSynonyms));
         this.updateGlobalVariables();
-    },
-
-    // Xóa từ
+        
+        // Tự động đồng bộ nếu bật
+        if (window.CloudManager) {
+            window.CloudManager.autoSyncData();
+        }
+    },    // Xóa từ
     removeWord(english) {
         delete this.data.vocabulary[english];
         delete this.data.wordExamples[english];
@@ -284,6 +293,11 @@ const VocabularyManager = {
         
         this.saveToLocalStorage();
         this.updateGlobalVariables();
+        
+        // Tự động đồng bộ nếu bật
+        if (window.CloudManager) {
+            window.CloudManager.autoSyncData();
+        }
     }
 };
 

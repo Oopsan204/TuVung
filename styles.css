@@ -171,6 +171,43 @@ header p {
     background-color: #c0392b;
 }
 
+/* Active button states */
+.btn.active {
+    background-color: var(--secondary-color) !important;
+    color: white !important;
+    box-shadow: 0 2px 8px rgba(46, 204, 113, 0.3);
+    position: relative;
+}
+
+.btn.active::before {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    background: linear-gradient(45deg, var(--secondary-color), #27ae60);
+    border-radius: 6px;
+    z-index: -1;
+    animation: activeButtonGlow 2s ease-in-out infinite alternate;
+}
+
+@keyframes activeButtonGlow {
+    0% {
+        opacity: 0.7;
+        transform: scale(1);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1.02);
+    }
+}
+
+.btn.active:hover {
+    background-color: #27ae60 !important;
+    transform: translateY(-1px);
+}
+
 /* Forms and inputs */
 .input-group {
     display: flex;

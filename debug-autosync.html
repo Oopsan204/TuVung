@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Auto-Sync</title>
+</head>
+<body>
+    <h1>Debug Auto-Sync</h1>
+    <div id="debug-info"></div>
+    <button id="test-add-word">Test Add Word</button>
+    <button id="test-auto-sync">Test Auto Sync</button>
+    <button id="check-state">Check CloudManager State</button>
+    
+    <script src="js/config.js"></script>
+    <script src="js/modules/vocabulary-manager.js"></script>
+    <script src="js/modules/cloud-manager.js"></script>
+    
+    <script>
+        const debugInfo = document.getElementById('debug-info');
+        
+        function log(message) {
+            debugInfo.innerHTML += `<p>${new Date().toLocaleTimeString()}: ${message}</p>`;
+            console.log(message);
+        }
+        
+        async function init() {
+            log("Initializing modules...");
+            
+            // Initialize VocabularyManager first
+            await VocabularyManager.load();
+            VocabularyManager.updateGlobalVariables();
+            log(`Vocabulary loaded: ${Object.keys(vocabulary).length} words`);
+            
+            // Initialize CloudManager
+            CloudManager.init();
+            log("CloudManager initialized");
+            
+            checkCloudManagerState();
+        }
+        
+        function checkCloudManagerState() {
+            log(`CloudManager state:`);
+            log(`- autoSync: ${CloudManager.autoSync}`);
+            log(`- token: ${CloudManager.token ? 'Set' : 'Not set'}`);
+            log(`- gistId: ${CloudManager.gistId || 'Not set'}`);
+        }
+        
+        document.getElementById('test-add-word').addEventListener('click', () => {
+            log("Testing addWord...");
+            const testWord = `test${Date.now()}`;
+            VocabularyManager.addWord(testWord, 'từ kiểm tra');
+            log(`Added word: ${testWord}`);
+        });
+        
+        document.getElementById('test-auto-sync').addEventListener('click', () => {
+            log("Testing autoSyncData...");
+            CloudManager.autoSyncData();
+            log("autoSyncData called");
+        });
+        
+        document.getElementById('check-state').addEventListener('click', () => {
+            checkCloudManagerState();
+        });
+        
+        // Initialize on load
+        init();
+    </script>
+</body>
+</html>

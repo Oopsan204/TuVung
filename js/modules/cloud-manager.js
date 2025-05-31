@@ -2,24 +2,27 @@
 const CloudManager = {
     token: '',
     gistId: '',
-
-    // Khởi tạo
+    autoSync: false, // Thêm cài đặt tự động đồng bộ
+    syncTimeout: null, // Timeout cho debounce    // Khởi tạo
     init() {
         this.loadSettings();
         this.setupEventListeners();
         this.updateAuthStatus();
+        this.updateSyncButtonState();
     },
 
     // Tải cài đặt từ localStorage
     loadSettings() {
         this.token = localStorage.getItem('githubToken') || '';
         this.gistId = localStorage.getItem('gistId') || '';
+        this.autoSync = localStorage.getItem('autoSync') === 'true';
     },
 
     // Lưu cài đặt
     saveSettings() {
         localStorage.setItem('githubToken', this.token);
         localStorage.setItem('gistId', this.gistId);
+        localStorage.setItem('autoSync', this.autoSync.toString());
     },
 
     // Thiết lập event listeners
@@ -47,11 +50,15 @@ const CloudManager = {
         const downloadBtn = document.getElementById('download-data');
         if (downloadBtn) {
             downloadBtn.addEventListener('click', () => this.downloadData());
-        }
-
-        const syncBtn = document.getElementById('sync-data');
+        }        const syncBtn = document.getElementById('sync-data');
         if (syncBtn) {
-            syncBtn.addEventListener('click', () => this.syncData());
+            syncBtn.addEventListener('click', () => {
+                if (this.token) {
+                    this.toggleAutoSync();
+                } else {
+                    this.syncData();
+                }
+            });
         }
 
         const closeTokenDialog = document.getElementById('close-token-dialog');
@@ -543,6 +550,57 @@ const CloudManager = {
 
         // Clear file input
         event.target.value = '';
+    },
+
+    // Bật/tắt tự động đồng bộ
+    toggleAutoSync() {
+        this.autoSync = !this.autoSync;
+        this.saveSettings();
+        
+        if (window.UIManager) {
+            const message = this.autoSync ? 
+                'Đã bật tự động đồng bộ dữ liệu!' : 
+                'Đã tắt tự động đồng bộ dữ liệu!';
+            window.UIManager.showToast(message, 'info');
+        }
+        
+        this.updateSyncButtonState();
+    },
+
+    // Cập nhật trạng thái nút đồng bộ
+    updateSyncButtonState() {
+        const syncBtn = document.getElementById('sync-data');
+        if (syncBtn) {
+            if (this.autoSync) {
+                syncBtn.classList.add('active');
+                syncBtn.innerHTML = '<i class="fas fa-sync"></i> Tự động đồng bộ (BẬT)';
+            } else {
+                syncBtn.classList.remove('active');
+                syncBtn.innerHTML = '<i class="fas fa-sync"></i> Đồng bộ tự động';
+            }
+        }
+    },
+
+    // Tự động đồng bộ với debounce (chờ 3 giây sau thay đổi cuối)
+    autoSyncData() {
+        if (!this.autoSync || !this.token) {
+            return;
+        }
+
+        // Clear timeout cũ nếu có
+        if (this.syncTimeout) {
+            clearTimeout(this.syncTimeout);
+        }
+
+        // Đặt timeout mới
+        this.syncTimeout = setTimeout(async () => {
+            try {
+                console.log('Tự động đồng bộ dữ liệu...');
+                await this.uploadData();
+            } catch (error) {
+                console.error('Lỗi tự động đồng bộ:', error);
+            }
+        }, 3000); // Đợi 3 giây sau thay đổi cuối
     },
 
     // Xác thực GitHub token

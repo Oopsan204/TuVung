@@ -194,13 +194,16 @@ const SRSManager = {    // Khởi tạo dữ liệu SRS cho một từ
         });
 
         return stats;
-    },
-
-    // Lưu dữ liệu SRS
+    },    // Lưu dữ liệu SRS
     saveSRSData() {
         try {
             localStorage.setItem('srsData', JSON.stringify(srsData));
             localStorage.setItem('srsSettings', JSON.stringify(srsSettings));
+            
+            // Tự động đồng bộ nếu bật
+            if (window.CloudManager) {
+                window.CloudManager.autoSyncData();
+            }
         } catch (error) {
             console.error('Lỗi khi lưu dữ liệu SRS:', error);
         }
