@@ -620,15 +620,18 @@
                 <label for="github-token">GitHub Token:</label>
                 <input type="password" id="github-token" placeholder="Nhập GitHub Personal Access Token...">
             </div>
-            
-            <div class="instructions">
+              <div class="instructions">
                 <h4>Hướng dẫn tạo GitHub Token:</h4>
                 <ol>
-                    <li>Truy cập <a href="https://github.com/settings/tokens" target="_blank">GitHub Settings → Developer settings → Personal access tokens</a></li>
+                    <li>Truy cập <a href="https://github.com/settings/tokens?type=beta" target="_blank">GitHub Settings → Developer settings → Personal access tokens (fine-grained)</a></li>
                     <li>Nhấp "Generate new token"</li>
-                    <li>Chọn scope "gist" để có quyền tạo và chỉnh sửa gist</li>
-                    <li>Copy token và dán vào ô trên</li>
+                    <li>Đặt tên cho token và chọn thời hạn</li>
+                    <li><strong>Quan trọng:</strong> Trong phần "Repository access", chọn "Public Repositories (read-only)" HOẶC "All repositories"</li>
+                    <li>Trong phần "Account permissions", chọn "Gists" với quyền "Write"</li>
+                    <li>Nhấp "Generate token" và copy token</li>
+                    <li>Dán token vào ô trên</li>
                 </ol>
+                <p><strong>Lưu ý:</strong> Token chỉ hiển thị 1 lần, hãy lưu lại để sử dụng sau.</p>
             </div>
             
             <div class="modal-actions">

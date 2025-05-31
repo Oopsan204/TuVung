@@ -90,10 +90,8 @@ const CloudManager = {
         if (dialog) {
             dialog.style.display = 'none';
         }
-    },
-
-    // Lưu token
-    saveToken() {
+    },    // Lưu token
+    async saveToken() {
         const tokenInput = document.getElementById('github-token');
         if (!tokenInput) return;
 
@@ -105,13 +103,24 @@ const CloudManager = {
             return;
         }
 
+        // Xác thực token trước khi lưu
         this.token = token;
+        const validation = await this.validateToken();
+        
+        if (!validation.valid) {
+            if (window.UIManager) {
+                window.UIManager.showToast(`Lỗi xác thực: ${validation.message}`, 'error');
+            }
+            this.token = '';
+            return;
+        }
+
         this.saveSettings();
         this.hideLoginDialog();
         this.updateAuthStatus();
         
         if (window.UIManager) {
-            window.UIManager.showToast('Đã lưu GitHub Token thành công!', 'success');
+            window.UIManager.showToast(`${validation.message}`, 'success');
         }
     },
 
@@ -164,14 +173,23 @@ const CloudManager = {
                 if (window.UIManager) {
                     window.UIManager.showToast('Đã upload dữ liệu thành công!', 'success');
                     window.UIManager.updateDataStatistics();
+                }            } else {
+                let errorMessage = `HTTP error! status: ${response.status}`;
+                
+                if (response.status === 401) {
+                    errorMessage = 'Token không hợp lệ hoặc đã hết hạn. Vui lòng đăng nhập lại.';
+                } else if (response.status === 403) {
+                    errorMessage = 'Token không có quyền tạo Gist. Vui lòng kiểm tra scope "gist".';
+                } else if (response.status === 422) {
+                    errorMessage = 'Dữ liệu không hợp lệ. Vui lòng thử lại.';
                 }
-            } else {
-                throw new Error(`HTTP error! status: ${response.status}`);
+                
+                throw new Error(errorMessage);
             }
         } catch (error) {
             console.error('Lỗi upload:', error);
             if (window.UIManager) {
-                window.UIManager.showToast('Lỗi khi upload dữ liệu!', 'error');
+                window.UIManager.showToast(`Lỗi khi upload: ${error.message}`, 'error');
             }
         }
     },
@@ -185,11 +203,11 @@ const CloudManager = {
             return;
         }
 
-        try {
-            const response = await fetch(`https://api.github.com/gists/${this.gistId}`, {
+        try {            const response = await fetch(`https://api.github.com/gists/${this.gistId}`, {
                 headers: {
-                    'Authorization': `token ${this.token}`,
-                    'Accept': 'application/vnd.github.v3+json'
+                    'Authorization': `Bearer ${this.token}`,
+                    'Accept': 'application/vnd.github+json',
+                    'X-GitHub-Api-Version': '2022-11-28'
                 }
             });
 
@@ -241,14 +259,13 @@ const CloudManager = {
         const files = {};
         Object.keys(data).forEach(key => {
             files[`${key}.json`] = { content: data[key] };
-        });
-
-        return fetch('https://api.github.com/gists', {
+        });        return fetch('https://api.github.com/gists', {
             method: 'POST',
             headers: {
-                'Authorization': `token ${this.token}`,
-                'Accept': 'application/vnd.github.v3+json',
-                'Content-Type': 'application/json'
+                'Authorization': `Bearer ${this.token}`,
+                'Accept': 'application/vnd.github+json',
+                'Content-Type': 'application/json',
+                'X-GitHub-Api-Version': '2022-11-28'
             },
             body: JSON.stringify({
                 description: `Dữ liệu từ vựng tiếng Anh - TuVung App (${new Date().toLocaleString()})`,
@@ -263,14 +280,13 @@ const CloudManager = {
         const files = {};
         Object.keys(data).forEach(key => {
             files[`${key}.json`] = { content: data[key] };
-        });
-
-        return fetch(`https://api.github.com/gists/${this.gistId}`, {
+        });        return fetch(`https://api.github.com/gists/${this.gistId}`, {
             method: 'PATCH',
             headers: {
-                'Authorization': `token ${this.token}`,
-                'Accept': 'application/vnd.github.v3+json',
-                'Content-Type': 'application/json'
+                'Authorization': `Bearer ${this.token}`,
+                'Accept': 'application/vnd.github+json',
+                'Content-Type': 'application/json',
+                'X-GitHub-Api-Version': '2022-11-28'
             },
             body: JSON.stringify({
                 description: `Dữ liệu từ vựng tiếng Anh - TuVung App (Cập nhật: ${new Date().toLocaleString()})`,
@@ -527,7 +543,50 @@ const CloudManager = {
 
         // Clear file input
         event.target.value = '';
-    }
+    },
+
+    // Xác thực GitHub token
+    async validateToken() {
+        if (!this.token) {
+            return { valid: false, message: 'Không có token' };
+        }
+
+        try {
+            const response = await fetch('https://api.github.com/user', {
+                headers: {
+                    'Authorization': `Bearer ${this.token}`,
+                    'Accept': 'application/vnd.github+json',
+                    'X-GitHub-Api-Version': '2022-11-28'
+                }
+            });
+
+            if (response.ok) {
+                const user = await response.json();
+                return { 
+                    valid: true, 
+                    message: `Đã xác thực thành công với user: ${user.login}`,
+                    user: user
+                };
+            } else {
+                let errorMessage = 'Token không hợp lệ';
+                if (response.status === 401) {
+                    errorMessage = 'Token đã hết hạn hoặc không có quyền truy cập';
+                } else if (response.status === 403) {
+                    errorMessage = 'Token không có quyền cần thiết (cần scope "gist")';
+                }
+                return { 
+                    valid: false, 
+                    message: errorMessage,
+                    status: response.status
+                };
+            }
+        } catch (error) {
+            return { 
+                valid: false, 
+                message: `Lỗi kết nối: ${error.message}`
+            };
+        }
+    },
 };
 
 // Export CloudManager
