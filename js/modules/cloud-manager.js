@@ -340,13 +340,34 @@ const CloudManager = {
     // Lấy thông tin kết nối
     getConnectionStatus() {
         return this.isOnline() ? 'online' : 'offline';
-    },
-
-    // Download backup file
+    },    // Download backup file
     downloadBackup() {
         try {
-            const data = this.prepareDataForUpload();
-            const dataStr = JSON.stringify(data, null, 2);
+            // Tạo backup với cả hai định dạng để đảm bảo tương thích
+            const gistData = this.prepareDataForUpload();
+            const directData = {
+                vocabulary: window.vocabulary || {},
+                wordPackages: window.wordPackages || {},
+                wordTopics: window.wordTopics || {},
+                wordSynonyms: window.wordSynonyms || {},
+                srsData: window.srsData || {},
+                metadata: {
+                    lastUpdated: new Date().toISOString(),
+                    deviceInfo: navigator.userAgent,
+                    wordCount: Object.keys(window.vocabulary || {}).length,
+                    topicCount: Object.keys(window.wordTopics || {}).length,
+                    version: '1.0.0',
+                    backupFormat: 'combined'
+                }
+            };
+
+            // Kết hợp cả hai định dạng
+            const combinedData = {
+                ...gistData, // Định dạng Gist (JSON strings)
+                ...directData // Định dạng direct (objects)
+            };
+
+            const dataStr = JSON.stringify(combinedData, null, 2);
             const dataBlob = new Blob([dataStr], { type: 'application/json' });
             
             const url = URL.createObjectURL(dataBlob);
@@ -377,6 +398,90 @@ const CloudManager = {
         }
     },
 
+    // Xử lý dữ liệu backup 
+    async processBackupData(data) {
+        try {
+            // Kiểm tra định dạng dữ liệu (có thể là Gist format hoặc direct format)
+            if (data.vocabulary_data || data.word_packages || data.word_topics || data.word_synonyms) {
+                // Gist format - parse JSON strings
+                if (data.vocabulary_data) {
+                    const vocabulary = typeof data.vocabulary_data === 'string' ? 
+                        JSON.parse(data.vocabulary_data) : data.vocabulary_data;
+                    if (window.VocabularyManager) {
+                        window.VocabularyManager.data.vocabulary = vocabulary;
+                    }
+                }
+
+                if (data.word_packages) {
+                    const wordPackages = typeof data.word_packages === 'string' ? 
+                        JSON.parse(data.word_packages) : data.word_packages;
+                    if (window.VocabularyManager) {
+                        window.VocabularyManager.data.wordPackages = wordPackages;
+                    }
+                }
+
+                if (data.word_topics) {
+                    const wordTopics = typeof data.word_topics === 'string' ? 
+                        JSON.parse(data.word_topics) : data.word_topics;
+                    if (window.VocabularyManager) {
+                        window.VocabularyManager.data.wordTopics = wordTopics;
+                    }
+                }
+
+                if (data.word_synonyms) {
+                    const wordSynonyms = typeof data.word_synonyms === 'string' ? 
+                        JSON.parse(data.word_synonyms) : data.word_synonyms;
+                    if (window.VocabularyManager) {
+                        window.VocabularyManager.data.wordSynonyms = wordSynonyms;
+                    }
+                }
+
+                if (data.srs_data) {
+                    const srsData = typeof data.srs_data === 'string' ? 
+                        JSON.parse(data.srs_data) : data.srs_data;
+                    window.srsData = srsData;
+                    if (window.SRSManager) {
+                        window.SRSManager.saveSRSData();
+                    }
+                }
+            } else {
+                // Direct format - use data directly
+                if (data.vocabulary && window.VocabularyManager) {
+                    window.VocabularyManager.data.vocabulary = data.vocabulary;
+                }
+
+                if (data.wordPackages && window.VocabularyManager) {
+                    window.VocabularyManager.data.wordPackages = data.wordPackages;
+                }
+
+                if (data.wordTopics && window.VocabularyManager) {
+                    window.VocabularyManager.data.wordTopics = data.wordTopics;
+                }
+
+                if (data.wordSynonyms && window.VocabularyManager) {
+                    window.VocabularyManager.data.wordSynonyms = data.wordSynonyms;
+                }
+
+                if (data.srsData) {
+                    window.srsData = data.srsData;
+                    if (window.SRSManager) {
+                        window.SRSManager.saveSRSData();
+                    }
+                }
+            }
+
+            // Lưu dữ liệu và cập nhật biến toàn cục
+            if (window.VocabularyManager) {
+                window.VocabularyManager.saveToLocalStorage();
+                window.VocabularyManager.updateGlobalVariables();
+            }
+
+        } catch (error) {
+            console.error('Lỗi khi xử lý dữ liệu backup:', error);
+            throw error;
+        }
+    },
+
     // Handle restore file
     async handleRestoreFile(event) {
         const file = event.target.files[0];
@@ -391,18 +496,17 @@ const CloudManager = {
 
         if (!confirm('Việc khôi phục sẽ ghi đè toàn bộ dữ liệu hiện tại. Bạn có chắc chắn muốn tiếp tục?')) {
             return;
-        }
-
-        try {
+        }        try {
             const text = await file.text();
             const data = JSON.parse(text);
             
             // Validate data structure
-            if (!data.vocabulary && !data.wordTopics && !data.wordSynonyms) {
+            if (!data.vocabulary_data && !data.word_topics && !data.word_synonyms && 
+                !data.vocabulary && !data.wordTopics && !data.wordSynonyms) {
                 throw new Error('File backup không hợp lệ!');
             }
 
-            await this.processGistData(data);
+            await this.processBackupData(data);
             
             if (window.UIManager) {
                 window.UIManager.showToast('Đã khôi phục dữ liệu thành công!', 'success');
