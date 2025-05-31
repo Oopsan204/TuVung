@@ -58,6 +58,22 @@ const CloudManager = {
         if (closeTokenDialog) {
             closeTokenDialog.addEventListener('click', () => this.hideLoginDialog());
         }
+
+        // Add backup event listeners
+        const backupDownloadBtn = document.getElementById('backup-download');
+        if (backupDownloadBtn) {
+            backupDownloadBtn.addEventListener('click', () => this.downloadBackup());
+        }
+
+        const backupRestoreBtn = document.getElementById('backup-restore');
+        if (backupRestoreBtn) {
+            backupRestoreBtn.addEventListener('click', () => this.showRestoreDialog());
+        }
+
+        const backupFileInput = document.getElementById('backup-file-input');
+        if (backupFileInput) {
+            backupFileInput.addEventListener('change', (e) => this.handleRestoreFile(e));
+        }
     },
 
     // Hiển thị dialog đăng nhập
@@ -324,6 +340,89 @@ const CloudManager = {
     // Lấy thông tin kết nối
     getConnectionStatus() {
         return this.isOnline() ? 'online' : 'offline';
+    },
+
+    // Download backup file
+    downloadBackup() {
+        try {
+            const data = this.prepareDataForUpload();
+            const dataStr = JSON.stringify(data, null, 2);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            
+            const url = URL.createObjectURL(dataBlob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `tuvung-backup-${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+            
+            if (window.UIManager) {
+                window.UIManager.showToast('Đã tải xuống file backup thành công!', 'success');
+            }
+        } catch (error) {
+            console.error('Lỗi khi tạo backup:', error);
+            if (window.UIManager) {
+                window.UIManager.showToast('Lỗi khi tạo file backup!', 'error');
+            }
+        }
+    },
+
+    // Show restore dialog
+    showRestoreDialog() {
+        const fileInput = document.getElementById('backup-file-input');
+        if (fileInput) {
+            fileInput.click();
+        }
+    },
+
+    // Handle restore file
+    async handleRestoreFile(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        if (!file.type.includes('json')) {
+            if (window.UIManager) {
+                window.UIManager.showToast('Vui lòng chọn file JSON hợp lệ!', 'error');
+            }
+            return;
+        }
+
+        if (!confirm('Việc khôi phục sẽ ghi đè toàn bộ dữ liệu hiện tại. Bạn có chắc chắn muốn tiếp tục?')) {
+            return;
+        }
+
+        try {
+            const text = await file.text();
+            const data = JSON.parse(text);
+            
+            // Validate data structure
+            if (!data.vocabulary && !data.wordTopics && !data.wordSynonyms) {
+                throw new Error('File backup không hợp lệ!');
+            }
+
+            await this.processGistData(data);
+            
+            if (window.UIManager) {
+                window.UIManager.showToast('Đã khôi phục dữ liệu thành công!', 'success');
+                window.UIManager.updateDataStatistics();
+            }
+
+            // Reload the current page to reflect changes
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+
+        } catch (error) {
+            console.error('Lỗi khi khôi phục backup:', error);
+            if (window.UIManager) {
+                window.UIManager.showToast('Lỗi khi khôi phục dữ liệu: ' + error.message, 'error');
+            }
+        }
+
+        // Clear file input
+        event.target.value = '';
     }
 };
 

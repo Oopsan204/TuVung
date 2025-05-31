@@ -191,55 +191,7 @@
                                 </button>
                             </div>
                         </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- SRS Dashboard Modal -->
-            <div id="srs-dashboard" class="srs-dashboard">
-                <div class="srs-dashboard-content">
-                    <button class="close-dashboard" id="close-srs-dashboard">
-                        <i class="fas fa-times"></i>
-                    </button>
-                    
-                    <h3><i class="fas fa-chart-bar"></i> Thống kê SRS</h3>
-                    
-                    <div class="srs-stats-grid">
-                        <div class="srs-stat-card">
-                            <h4 id="total-words-stat">0</h4>
-                            <p>Tổng từ vựng</p>
-                        </div>
-                        <div class="srs-stat-card">
-                            <h4 id="studied-words-stat">0</h4>
-                            <p>Đã học</p>
-                        </div>
-                        <div class="srs-stat-card">
-                            <h4 id="new-words-stat">0</h4>
-                            <p>Từ mới</p>
-                        </div>
-                        <div class="srs-stat-card">
-                            <h4 id="due-words-stat">0</h4>
-                            <p>Cần ôn tập</p>
-                        </div>
-                        <div class="srs-stat-card">
-                            <h4 id="learned-words-stat">0</h4>
-                            <p>Đã thành thạo</p>
-                        </div>
-                        <div class="srs-stat-card">
-                            <h4 id="accuracy-stat">0%</h4>
-                            <p>Độ chính xác</p>
-                        </div>
-                    </div>
-                    
-                    <div class="srs-dashboard-actions">
-                        <button class="btn primary" id="reset-srs-data">
-                            <i class="fas fa-refresh"></i> Reset dữ liệu SRS
-                        </button>
-                        <button class="btn secondary" id="export-srs-data">
-                            <i class="fas fa-download"></i> Xuất dữ liệu
-                        </button>
-                    </div>
-                </div>
+                    </div>                </div>
             </div>
 
             <!-- Tab từ điển -->
@@ -555,93 +507,133 @@
                         <button id="reset-settings" class="btn secondary">Khôi phục mặc định</button>
                     </div>
                 </div>
-            </div>
-
-            <!-- Tab Đám Mây (Cloud) - Sửa đổi để loại bỏ Firebase và ID phiên -->
+            </div>            <!-- Tab Đám Mây (Cloud) -->
             <div id="cloud" class="tab-pane">
-                <div class="tab-header">
-                    <h2>Đồng bộ và Sao lưu dữ liệu</h2>
-                    <div class="connection-status">
-                        <span>Trạng thái: </span>
-                        <span id="cloud-connection-status" class="online">Đã kết nối</span>
-                    </div>
-                </div>
-
-                <div class="tab-content">
-                    <!-- GitHub Gist Sync Panel -->
-                    <div id="github-gist-panel" class="sync-panel">
-                        <h3>Đồng bộ với GitHub Gist</h3>
+                <div class="cloud-section">
+                    <div class="cloud-header">
+                        <h3><i class="fas fa-cloud"></i> Đồng bộ dữ liệu với GitHub Gist</h3>
                         <p>GitHub Gist cho phép bạn lưu trữ dữ liệu từ vựng trực tuyến và truy cập từ bất kỳ thiết bị nào.</p>
-                        
-                        <div id="github-auth-info">
-                            <div class="auth-status">
-                                <span>Trạng thái xác thực: </span>
-                                <span id="github-auth-status">Chưa xác thực</span>
-                            </div>
-                            <div class="gist-info">
-                                <span>Gist ID: </span>
-                                <span id="github-gist-id">Chưa có</span>
-                            </div>
+                    </div>
+
+                    <!-- GitHub Authentication Status -->
+                    <div class="cloud-auth-section">
+                        <div class="auth-status">
+                            <h4>Trạng thái xác thực</h4>
+                            <p>Trạng thái: <span id="github-auth-status">Chưa xác thực</span></p>
                         </div>
                         
-                        <div class="button-group">
-                            <button id="github-auth-btn" class="action-btn">Xác thực GitHub</button>
-                            <button id="github-list-gists-btn" class="action-btn">Xem danh sách Gist</button>
-                        </div>
-                        
-                        <div class="button-group">
-                            <button id="github-create-gist-btn" class="action-btn success">Tạo Gist mới</button>
-                            <button id="github-update-gist-btn" class="action-btn">Cập nhật lên Gist</button>
-                            <button id="github-load-gist-btn" class="action-btn">Tải từ Gist</button>
+                        <div class="auth-buttons">
+                            <button id="github-login" class="btn primary">
+                                <i class="fas fa-sign-in-alt"></i> Đăng nhập GitHub
+                            </button>
+                            <button id="github-logout" class="btn secondary" style="display: none;">
+                                <i class="fas fa-sign-out-alt"></i> Đăng xuất
+                            </button>
                         </div>
                     </div>
-                    
-                    <!-- Panel sao lưu dữ liệu -->
-                    <div class="backup-section">
-                        <h3>Sao lưu và khôi phục</h3>
+
+                    <!-- Cloud Actions -->
+                    <div class="cloud-actions">
+                        <h4>Đồng bộ dữ liệu</h4>
                         <div class="button-group">
-                            <button id="btn-backup-download" class="action-btn secondary">Tải xuống dữ liệu</button>
-                            <button id="btn-backup-restore" class="action-btn secondary">Khôi phục từ file</button>
+                            <button id="upload-data" class="btn success">
+                                <i class="fas fa-upload"></i> Tải lên Cloud
+                            </button>
+                            <button id="download-data" class="btn primary">
+                                <i class="fas fa-download"></i> Tải xuống từ Cloud
+                            </button>
+                            <button id="sync-data" class="btn secondary">
+                                <i class="fas fa-sync"></i> Đồng bộ tự động
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Local Backup -->
+                    <div class="backup-section">
+                        <h4>Sao lưu cục bộ</h4>
+                        <div class="button-group">
+                            <button id="backup-download" class="btn secondary">
+                                <i class="fas fa-file-export"></i> Xuất dữ liệu
+                            </button>
+                            <button id="backup-restore" class="btn secondary">
+                                <i class="fas fa-file-import"></i> Nhập dữ liệu
+                            </button>
                             <input type="file" id="backup-file-input" accept=".json" style="display: none;">
                         </div>
                     </div>
                     
-                    <!-- Thông tin dữ liệu -->
+                    <!-- Data Statistics -->
                     <div class="data-statistics">
-                        <h3>Thông tin dữ liệu</h3>
-                        <div class="stats-row">
-                            <div class="stat-item">
+                        <h4>Thống kê dữ liệu</h4>
+                        <div class="stats-grid">
+                            <div class="stat-card">
                                 <div class="stat-value" id="cloud-vocab-count">0</div>
                                 <div class="stat-label">Từ vựng</div>
                             </div>
-                            <div class="stat-item">
+                            <div class="stat-card">
                                 <div class="stat-value" id="cloud-topic-count">0</div>
                                 <div class="stat-label">Chủ đề</div>
                             </div>
-                            <div class="stat-item">
+                            <div class="stat-card">
                                 <div class="stat-value" id="cloud-synonym-count">0</div>
                                 <div class="stat-label">Nhóm từ đồng nghĩa</div>
                             </div>
-                        </div>
-                        <div class="last-updated">
-                            <div>Cập nhật lần cuối:</div>
-                            <div id="cloud-last-update">Chưa có dữ liệu</div>
+                        </div>                        <div class="last-updated">
+                            <span>Cập nhật cuối: </span>
+                            <span id="cloud-last-update">Chưa có dữ liệu</span>
                         </div>
                     </div>
-                    
-                    <!-- Hướng dẫn sử dụng -->
+
+                    <!-- Help Section -->
                     <div class="help-section">
-                        <h3>Hướng dẫn sử dụng</h3>
+                        <h4>Hướng dẫn sử dụng</h4>
                         <div class="help-item">
-                            <h4>Đồng bộ với GitHub Gist:</h4>
+                            <h5><i class="fas fa-cloud"></i> Đồng bộ với GitHub Gist:</h5>
                             <p>Xác thực với GitHub và tạo/cập nhật Gist để lưu trữ dữ liệu từ vựng của bạn. Bạn có thể truy cập dữ liệu này từ bất kỳ thiết bị nào bằng cách nhập cùng token và Gist ID.</p>
                         </div>
                         <div class="help-item">
-                            <h4>Sao lưu dữ liệu:</h4>
-                            <p>Sử dụng nút "Tải xuống dữ liệu" để tạo bản sao lưu cục bộ dưới dạng file JSON.</p>
+                            <h5><i class="fas fa-file-export"></i> Sao lưu dữ liệu:</h5>
+                            <p>Sử dụng nút "Xuất dữ liệu" để tạo bản sao lưu cục bộ dưới dạng file JSON. Bạn có thể khôi phục dữ liệu bằng nút "Nhập dữ liệu".</p>
                         </div>
                     </div>
                 </div>
+            </div>
+
+            <!-- Tab cài đặt -->
+            <div class="tab-pane" id="settings">
+                <div class="settings-section">
+                    <h3>Cài đặt ứng dụng</h3>
+                    <div class="settings-group">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- GitHub Token Dialog -->
+    <div id="github-token-dialog" class="modal" style="display: none;">
+        <div class="modal-content">
+            <h3>Nhập GitHub Personal Access Token</h3>
+            <p>Để sử dụng tính năng đồng bộ với GitHub Gist, bạn cần tạo và nhập Personal Access Token.</p>
+            
+            <div class="form-group">
+                <label for="github-token">GitHub Token:</label>
+                <input type="password" id="github-token" placeholder="Nhập GitHub Personal Access Token...">
+            </div>
+            
+            <div class="instructions">
+                <h4>Hướng dẫn tạo GitHub Token:</h4>
+                <ol>
+                    <li>Truy cập <a href="https://github.com/settings/tokens" target="_blank">GitHub Settings → Developer settings → Personal access tokens</a></li>
+                    <li>Nhấp "Generate new token"</li>
+                    <li>Chọn scope "gist" để có quyền tạo và chỉnh sửa gist</li>
+                    <li>Copy token và dán vào ô trên</li>
+                </ol>
+            </div>
+            
+            <div class="modal-actions">
+                <button id="save-token" class="btn primary">Lưu Token</button>
+                <button id="close-token-dialog" class="btn secondary">Hủy</button>
             </div>
         </div>
     </div>
@@ -684,6 +676,52 @@
                     <button id="save-selection" class="btn primary">Lưu thay đổi</button>
                     <button id="cancel-selection" class="btn danger">Hủy</button>
                 </div>
+            </div>        </div>
+    </div>
+
+    <!-- SRS Dashboard Modal -->
+    <div id="srs-dashboard" class="srs-dashboard">
+        <div class="srs-dashboard-content">
+            <button class="close-dashboard" id="close-srs-dashboard">
+                <i class="fas fa-times"></i>
+            </button>
+            
+            <h3><i class="fas fa-chart-bar"></i> Thống kê SRS</h3>
+            
+            <div class="srs-stats-grid">
+                <div class="srs-stat-card">
+                    <h4 id="total-words-stat">0</h4>
+                    <p>Tổng từ vựng</p>
+                </div>
+                <div class="srs-stat-card">
+                    <h4 id="studied-words-stat">0</h4>
+                    <p>Đã học</p>
+                </div>
+                <div class="srs-stat-card">
+                    <h4 id="new-words-stat">0</h4>
+                    <p>Từ mới</p>
+                </div>
+                <div class="srs-stat-card">
+                    <h4 id="due-words-stat">0</h4>
+                    <p>Cần ôn tập</p>
+                </div>
+                <div class="srs-stat-card">
+                    <h4 id="learned-words-stat">0</h4>
+                    <p>Đã thành thạo</p>
+                </div>
+                <div class="srs-stat-card">
+                    <h4 id="accuracy-stat">0%</h4>
+                    <p>Độ chính xác</p>
+                </div>
+            </div>
+            
+            <div class="srs-dashboard-actions">
+                <button class="btn primary" id="reset-srs-data">
+                    <i class="fas fa-refresh"></i> Reset dữ liệu SRS
+                </button>
+                <button class="btn secondary" id="export-srs-data">
+                    <i class="fas fa-download"></i> Xuất dữ liệu
+                </button>
             </div>
         </div>
     </div>
@@ -704,7 +742,42 @@
     <script src="js/modules/cloud-manager.js"></script>
     <script src="js/modules/quiz-manager.js"></script>
     <script src="js/modules/flashcard-manager.js"></script>
-    
+      <!-- SRS Completion Modal -->
+    <div id="srs-completion-container" class="srs-completion-container">
+        <div class="srs-completion-card">
+            <div class="completion-icon" id="completion-icon">🎉</div>
+            <h2 class="completion-title" id="completion-title">Hoàn thành!</h2>
+            <p class="completion-subtitle" id="completion-subtitle">Phiên học SRS đã kết thúc</p>
+            
+            <div class="completion-stats">
+                <div class="completion-stat">
+                    <div class="completion-stat-value" id="completion-total">0</div>
+                    <div class="completion-stat-label">Tổng từ</div>
+                </div>
+                <div class="completion-stat">
+                    <div class="completion-stat-value" id="completion-correct">0</div>
+                    <div class="completion-stat-label">Trả lời đúng</div>
+                </div>
+                <div class="completion-stat">
+                    <div class="completion-stat-value" id="completion-accuracy">0%</div>
+                    <div class="completion-stat-label">Độ chính xác</div>
+                </div>
+            </div>
+            
+            <div class="completion-actions">
+                <button id="completion-restart" class="btn primary">
+                    <i class="fas fa-redo"></i> Học tiếp
+                </button>
+                <button id="completion-dashboard" class="btn secondary">
+                    <i class="fas fa-chart-bar"></i> Dashboard
+                </button>
+                <button id="completion-close" class="btn secondary">
+                    <i class="fas fa-times"></i> Đóng
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Main application -->
     <script src="app.js"></script>
     <div style="text-align:center; margin:32px 0 12px 0; color:#888; font-size:15px;">

@@ -1,20 +1,21 @@
 // Module quản lý hệ thống SRS (Spaced Repetition System)
-const SRSManager = {
-    // Khởi tạo dữ liệu SRS cho một từ
+const SRSManager = {    // Khởi tạo dữ liệu SRS cho một từ
     initWord(word) {
         if (!srsData[word]) {
+            const now = new Date();
             srsData[word] = {
                 interval: srsSettings.initialInterval,
                 easeFactor: srsSettings.easeFactor,
                 repetitions: 0,
                 lastReview: null,
-                nextReview: new Date(),
+                nextReview: new Date(now.getTime() + srsSettings.initialInterval * 24 * 60 * 60 * 1000),
                 streak: 0,
                 totalReviews: 0,
                 correctReviews: 0,
                 difficulty: SRS_DIFFICULTY.GOOD,
                 history: []
             };
+            console.log('Initialized SRS data for word:', word);
         }
         return srsData[word];
     },
@@ -98,9 +99,7 @@ const SRSManager = {
 
         this.saveSRSData();
         return wordData;
-    },
-
-    // Lấy danh sách từ cần ôn tập
+    },    // Lấy danh sách từ cần ôn tập
     getDueWords() {
         const now = new Date();
         const dueWords = [];
@@ -108,7 +107,7 @@ const SRSManager = {
         Object.keys(vocabulary).forEach(word => {
             const wordData = srsData[word];
             if (!wordData) {
-                // Từ mới
+                // Từ mới - luôn cần ôn tập
                 dueWords.push({
                     word: word,
                     isNew: true,
@@ -116,27 +115,27 @@ const SRSManager = {
                     overdueDays: 0
                 });
             } else {
-                // Kiểm tra từ cần ôn tập
-                if (wordData.nextReview <= now) {
+                // Kiểm tra từ có cần ôn tập không
+                if (wordData.nextReview && wordData.nextReview <= now) {
                     const overdueDays = Math.floor((now - wordData.nextReview) / (24 * 60 * 60 * 1000));
-                    const priority = Math.min(100, 50 + overdueDays * 10); // Càng quá hạn càng ưu tiên
+                    const priority = Math.min(100, 50 + Math.max(0, overdueDays) * 10); // Càng quá hạn càng ưu tiên
                     
                     dueWords.push({
                         word: word,
                         isNew: false,
                         priority: priority,
-                        overdueDays: overdueDays
+                        overdueDays: Math.max(0, overdueDays)
                     });
                 }
             }
         });
 
-        // Sắp xếp theo độ ưu tiên
+        // Sắp xếp theo độ ưu tiên (cao -> thấp)
         dueWords.sort((a, b) => b.priority - a.priority);
+        
+        console.log('Due words found:', dueWords.length, 'out of', Object.keys(vocabulary).length, 'total words');
         return dueWords;
-    },
-
-    // Lấy thống kê SRS
+    },// Lấy thống kê SRS
     getStatistics() {
         const stats = {
             totalWords: Object.keys(vocabulary).length,
@@ -148,30 +147,51 @@ const SRSManager = {
         };
 
         const now = new Date();
-        let totalAccuracy = 0;
+        let totalCorrect = 0;
         let totalReviews = 0;
 
         Object.keys(vocabulary).forEach(word => {
             const wordData = srsData[word];
             if (!wordData) {
+                // Từ mới (chưa có trong SRS data)
                 stats.newWords++;
             } else {
-                if (wordData.nextReview <= now) {
+                // Từ đã có dữ liệu SRS
+                
+                // Kiểm tra từ cần ôn tập (quá hạn)
+                if (wordData.nextReview && wordData.nextReview <= now) {
                     stats.dueWords++;
-                } else if (wordData.repetitions >= 3 && wordData.streak >= 3) {
+                }
+                
+                // Từ đã học: có ít nhất 3 lần ôn tập và interval >= 7 ngày
+                if (wordData.repetitions >= 3 && wordData.interval >= 7) {
                     stats.learnedWords++;
                 }
                 
+                // Tính accuracy tổng thể
                 if (wordData.totalReviews > 0) {
-                    totalAccuracy += (wordData.correctReviews / wordData.totalReviews);
-                    totalReviews++;
+                    totalCorrect += wordData.correctReviews;
+                    totalReviews += wordData.totalReviews;
                 }
             }
         });
 
-        if (stats.studiedWords > 0) {
-            stats.averageAccuracy = Math.round((totalAccuracy / stats.studiedWords) * 100);
+        // Tính accuracy trung bình
+        if (totalReviews > 0) {
+            stats.averageAccuracy = Math.round((totalCorrect / totalReviews) * 100);
         }
+
+        // Debug log
+        console.log('SRS Statistics:', {
+            totalWords: stats.totalWords,
+            studiedWords: stats.studiedWords,
+            newWords: stats.newWords,
+            dueWords: stats.dueWords,
+            learnedWords: stats.learnedWords,
+            averageAccuracy: stats.averageAccuracy,
+            srsDataSize: Object.keys(srsData).length,
+            vocabularySize: Object.keys(vocabulary).length
+        });
 
         return stats;
     },

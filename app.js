@@ -434,13 +434,37 @@ function initSRSTab() {
 function initDictionaryTab() {
     UIManager.initDictionaryTab();
     
-    // Update dictionary count after vocabulary is loaded
-    updateDictionaryCount();
+    // Populate topic dropdowns
+    const dictTopicSelect = document.getElementById('dict-topic-select');
+    const apiTopicSelect = document.getElementById('api-topic-select');
     
-    // Event listeners
-    document.getElementById('dictionary-search')?.addEventListener('input', () => UIManager.searchDictionary());
+    if (dictTopicSelect) {
+        dictTopicSelect.innerHTML = '<option value="">--Chọn chủ đề--</option>';
+        // Add topics to the dropdown
+        for (const topic in wordTopics) {
+            const option = document.createElement('option');
+            option.value = topic;
+            option.textContent = topic;
+            dictTopicSelect.appendChild(option);
+        }
+    }
+    
+    if (apiTopicSelect) {
+        apiTopicSelect.innerHTML = '<option value="">--Chọn chủ đề--</option>';
+        // Add topics to the dropdown
+        for (const topic in wordTopics) {
+            const option = document.createElement('option');
+            option.value = topic;
+            option.textContent = topic;
+            apiTopicSelect.appendChild(option);
+        }
+    }
+    
+    // Update dictionary count after vocabulary is loaded
+    updateDictionaryCount();    // Event listeners
+    document.getElementById('dictionary-search')?.addEventListener('input', async () => await UIManager.searchDictionary());
     document.getElementById('clear-search')?.addEventListener('click', () => UIManager.clearDictionarySearch());
-    document.getElementById('add-word')?.addEventListener('click', () => UIManager.addNewWordToDictionary());
+    document.getElementById('dict-add-new-word')?.addEventListener('click', () => UIManager.addNewWordToDictionary());
 }
 
 // Add this new function to update the dictionary count
@@ -1107,30 +1131,54 @@ function updateSRSProgress() {
     const progressBar = document.getElementById('srs-progress-bar');
     
     if (srsSession.totalWords === 0) {
-        progressText.textContent = 'Không có từ nào cần ôn tập';
-        progressBar.style.width = '100%';
+        if (progressText) progressText.textContent = 'Không có từ nào cần ôn tập';
+        if (progressBar) progressBar.style.width = '100%';
         return;
     }
     
     const percentage = Math.round((srsSession.completedWords / srsSession.totalWords) * 100);
     const accuracy = srsSession.completedWords > 0 ? Math.round((srsSession.correctWords / srsSession.completedWords) * 100) : 0;
     
-    progressText.textContent = `${srsSession.completedWords}/${srsSession.totalWords} từ (${percentage}%) - Độ chính xác: ${accuracy}%`;
-    progressBar.style.width = `${percentage}%`;
+    if (progressText) {
+        progressText.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span><i class="fas fa-book"></i> ${srsSession.completedWords}/${srsSession.totalWords} từ (${percentage}%)</span>
+                <span><i class="fas fa-target"></i> Độ chính xác: ${accuracy}%</span>
+            </div>
+        `;
+    }
+    if (progressBar) progressBar.style.width = `${percentage}%`;
 }
 
 // Hiển thị thông báo không có từ cần ôn tập
 function showNoWordsMessage() {
-    document.getElementById('srs-word').textContent = 'Tuyệt vời!';
-    document.getElementById('srs-word-info').textContent = 'Không có từ nào cần ôn tập hôm nay';
-    document.getElementById('srs-answer').style.display = 'none';
-    document.getElementById('srs-show-answer').style.display = 'none';
-    document.getElementById('srs-rating-buttons').style.display = 'none';
+    // Ẩn card và controls
+    const srsCard = document.querySelector('.srs-card');
+    const srsControls = document.getElementById('srs-controls');
     
-    // Hiển thị nút dashboard
-    const dashboardBtn = document.getElementById('srs-dashboard-btn');
-    if (dashboardBtn) {
-        dashboardBtn.style.display = 'block';
+    if (srsCard) srsCard.style.display = 'none';
+    if (srsControls) srsControls.style.display = 'none';
+    
+    // Hiển thị message đẹp
+    const srsIntro = document.getElementById('srs-intro');
+    if (srsIntro) {
+        srsIntro.innerHTML = `
+            <div class="srs-no-words">
+                <div class="icon">🌟</div>
+                <h3>Tuyệt vời!</h3>
+                <p>Không có từ nào cần ôn tập hôm nay</p>
+                <button id="srs-dashboard-btn" class="btn primary">
+                    <i class="fas fa-chart-bar"></i> Xem thống kê
+                </button>
+            </div>
+        `;
+        srsIntro.style.display = 'block';
+        
+        // Re-attach event listener for dashboard button
+        const dashboardBtn = document.getElementById('srs-dashboard-btn');
+        if (dashboardBtn) {
+            dashboardBtn.addEventListener('click', showSRSDashboard);
+        }
     }
     
     updateSRSProgress();
@@ -1139,18 +1187,122 @@ function showNoWordsMessage() {
 // Hiển thị kết quả hoàn thành phiên học SRS
 function showSRSSessionComplete() {
     const accuracy = Math.round((srsSession.correctWords / srsSession.totalWords) * 100);
+    
+    // Ẩn card và controls
+    const srsCard = document.querySelector('.srs-card');
+    const srsControls = document.getElementById('srs-controls');
+    
+    if (srsCard) srsCard.style.display = 'none';
+    if (srsControls) srsControls.style.display = 'none';
+    
+    // Hiển thị completion modal
+    showCompletionModal(srsSession.totalWords, srsSession.correctWords, accuracy);
+    
+    // Show toast message
     let message = `Hoàn thành phiên học SRS!\n\n`;
     message += `Đã ôn tập: ${srsSession.totalWords} từ\n`;
     message += `Trả lời đúng: ${srsSession.correctWords} từ\n`;
     message += `Độ chính xác: ${accuracy}%`;
-      // Hiển thị thông báo hoàn thành
-    document.getElementById('srs-word').textContent = 'Hoàn thành!';
-    document.getElementById('srs-word-info').textContent = `Độ chính xác: ${accuracy}%`;
-    document.getElementById('srs-answer').style.display = 'none';
-    document.getElementById('srs-show-answer').style.display = 'none';
-    document.getElementById('srs-rating-buttons').style.display = 'none';
     
     UIManager.showToast(message, 'success');
+}
+
+function showCompletionModal(totalWords, correctWords, accuracy) {
+    const modal = document.getElementById('srs-completion-container');
+    const icon = document.getElementById('completion-icon');
+    const title = document.getElementById('completion-title');
+    const subtitle = document.getElementById('completion-subtitle');
+    const totalEl = document.getElementById('completion-total');
+    const correctEl = document.getElementById('completion-correct');
+    const accuracyEl = document.getElementById('completion-accuracy');
+    
+    if (!modal) return;
+    
+    // Set icon and title based on accuracy
+    let iconClass = '';
+    let titleText = '';
+    let subtitleText = '';
+    
+    if (accuracy >= 90) {
+        icon.textContent = '👑';
+        icon.className = 'completion-icon excellent';
+        titleText = 'Xuất sắc!';
+        subtitleText = 'Bạn đã thành thạo các từ vựng này';
+    } else if (accuracy >= 70) {
+        icon.textContent = '🎉';
+        icon.className = 'completion-icon good';
+        titleText = 'Tốt lắm!';
+        subtitleText = 'Tiếp tục cố gắng để đạt kết quả cao hơn';
+    } else if (accuracy >= 50) {
+        icon.textContent = '👍';
+        icon.className = 'completion-icon average';
+        titleText = 'Khá tốt!';
+        subtitleText = 'Hãy ôn tập thêm để cải thiện';
+    } else {
+        icon.textContent = '💪';
+        icon.className = 'completion-icon poor';
+        titleText = 'Cần cố gắng!';
+        subtitleText = 'Đừng bỏ cuộc, hãy tiếp tục luyện tập';
+    }
+    
+    title.textContent = titleText;
+    subtitle.textContent = subtitleText;
+    totalEl.textContent = totalWords;
+    correctEl.textContent = correctWords;
+    accuracyEl.textContent = accuracy + '%';
+    
+    // Show modal with animation
+    modal.style.display = 'flex';
+    setTimeout(() => {
+        modal.classList.add('show');
+    }, 50);
+    
+    // Setup event listeners
+    setupCompletionModalEvents();
+}
+
+function setupCompletionModalEvents() {
+    const modal = document.getElementById('srs-completion-container');
+    const restartBtn = document.getElementById('completion-restart');
+    const dashboardBtn = document.getElementById('completion-dashboard');
+    const closeBtn = document.getElementById('completion-close');
+    
+    if (restartBtn) {
+        restartBtn.onclick = () => {
+            hideCompletionModal();
+            startSRSSession();
+        };
+    }
+    
+    if (dashboardBtn) {
+        dashboardBtn.onclick = () => {
+            hideCompletionModal();
+            showSRSDashboard();
+        };
+    }
+    
+    if (closeBtn) {
+        closeBtn.onclick = hideCompletionModal;
+    }
+    
+    // Close on background click
+    if (modal) {
+        modal.onclick = (e) => {
+            if (e.target === modal) {
+                hideCompletionModal();
+            }
+        };
+    }
+}
+
+function hideCompletionModal() {
+    const modal = document.getElementById('srs-completion-container');
+    if (modal) {
+        modal.classList.remove('show');
+        setTimeout(() => {
+            modal.style.display = 'none';
+        }, 500);
+    }
 }
 
 function setupSRSEventListeners() {
@@ -1271,16 +1423,26 @@ function resetSettings() {
 function showSRSDashboard() {
     console.log('showSRSDashboard: Opening SRS dashboard...');
     
+    // Ensure SRS data is loaded
+    SRSManager.loadSRSData();
+    
     // Get statistics from SRS Manager
     const stats = SRSManager.getStatistics();
     
-    // Update dashboard elements
-    document.getElementById('total-words-stat').textContent = stats.totalWords;
-    document.getElementById('studied-words-stat').textContent = stats.studiedWords;
-    document.getElementById('new-words-stat').textContent = stats.newWords;
-    document.getElementById('due-words-stat').textContent = stats.dueWords;
-    document.getElementById('learned-words-stat').textContent = stats.learnedWords;
-    document.getElementById('accuracy-stat').textContent = stats.averageAccuracy + '%';
+    // Update dashboard elements with validation
+    const totalWordsEl = document.getElementById('total-words-stat');
+    const studiedWordsEl = document.getElementById('studied-words-stat');
+    const newWordsEl = document.getElementById('new-words-stat');
+    const dueWordsEl = document.getElementById('due-words-stat');
+    const learnedWordsEl = document.getElementById('learned-words-stat');
+    const accuracyEl = document.getElementById('accuracy-stat');
+    
+    if (totalWordsEl) totalWordsEl.textContent = stats.totalWords;
+    if (studiedWordsEl) studiedWordsEl.textContent = stats.studiedWords;
+    if (newWordsEl) newWordsEl.textContent = stats.newWords;
+    if (dueWordsEl) dueWordsEl.textContent = stats.dueWords;
+    if (learnedWordsEl) learnedWordsEl.textContent = stats.learnedWords;
+    if (accuracyEl) accuracyEl.textContent = stats.averageAccuracy + '%';
     
     // Show dashboard
     const dashboard = document.getElementById('srs-dashboard');
