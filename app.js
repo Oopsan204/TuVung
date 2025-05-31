@@ -32,13 +32,12 @@ async function init() {
           // Khởi tạo SRS Manager
         console.log('Khởi tạo SRS Manager...');
         SRSManager.loadSRSData();
-        
-        // Khởi tạo các module UI và tính năng
+          // Khởi tạo các module UI và tính năng
         console.log('Khởi tạo các module...');
         UIManager.init();
         AudioManager.init();
         LearningManager.init();
-        CloudManager.init();
+        await CloudManager.init(); // Đợi CloudManager hoàn thành để tự động tải xuống dữ liệu
         QuizManager.init();
         FlashcardManager.init();
           // Khởi tạo các tab        console.log('Khởi tạo các tab...');

@@ -4,11 +4,14 @@ const CloudManager = {
     gistId: '',
     autoSync: false, // Thêm cài đặt tự động đồng bộ
     syncTimeout: null, // Timeout cho debounce    // Khởi tạo
-    init() {
+    async init() {
         this.loadSettings();
         this.setupEventListeners();
         this.updateAuthStatus();
         this.updateSyncButtonState();
+        
+        // Tự động tải xuống dữ liệu mới nhất từ cloud nếu đã đăng nhập
+        await this.autoDownloadOnInit();
     },
 
     // Tải cài đặt từ localStorage
@@ -564,8 +567,7 @@ const CloudManager = {
             window.UIManager.showToast(message, 'info');
         }
         
-        this.updateSyncButtonState();
-    },
+        this.updateSyncButtonState();    },
 
     // Cập nhật trạng thái nút đồng bộ
     updateSyncButtonState() {
@@ -578,6 +580,44 @@ const CloudManager = {
                 syncBtn.classList.remove('active');
                 syncBtn.innerHTML = '<i class="fas fa-sync"></i> Đồng bộ tự động';
             }
+        }
+    },
+
+    // Tự động tải xuống dữ liệu khi khởi tạo ứng dụng
+    async autoDownloadOnInit() {
+        // Chỉ tự động tải xuống nếu đã có thông tin đăng nhập
+        if (!this.token || !this.gistId) {
+            console.log('CloudManager: Không có token hoặc gistId, bỏ qua auto-download');
+            return;
+        }
+
+        try {
+            console.log('CloudManager: Bắt đầu tự động tải xuống dữ liệu từ cloud...');
+            
+            const response = await fetch(`https://api.github.com/gists/${this.gistId}`, {
+                headers: {
+                    'Authorization': `Bearer ${this.token}`,
+                    'Accept': 'application/vnd.github+json',
+                    'X-GitHub-Api-Version': '2022-11-28'
+                }
+            });
+
+            if (response.ok) {
+                const gist = await response.json();
+                await this.loadDataFromGist(gist);
+                
+                console.log('CloudManager: Đã tải xuống và cập nhật dữ liệu từ cloud thành công');
+                
+                if (window.UIManager) {
+                    window.UIManager.showToast('Đã đồng bộ dữ liệu mới nhất từ cloud!', 'success');
+                    window.UIManager.updateDataStatistics();
+                }
+            } else {
+                console.warn('CloudManager: Không thể tải dữ liệu từ cloud:', response.status);
+            }
+        } catch (error) {
+            console.warn('CloudManager: Lỗi khi tự động tải xuống dữ liệu:', error.message);
+            // Không hiển thị toast lỗi cho auto-download để tránh làm phiền người dùng
         }
     },
 
