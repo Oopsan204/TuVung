@@ -1,0 +1,120 @@
+<!-- Simple SVG to PNG converter -->
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Create Extension Icons</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        canvas { border: 1px solid #ccc; margin: 10px; }
+        .download-btn { 
+            background: #4A90E2; 
+            color: white; 
+            padding: 8px 16px; 
+            border: none; 
+            border-radius: 4px; 
+            cursor: pointer; 
+            margin: 5px;
+        }
+        .download-btn:hover { background: #3670B6; }
+    </style>
+</head>
+<body>
+    <h2>TuVung Extension Icon Generator</h2>
+    <p>Click the download buttons to save the icon files:</p>
+    
+    <div>
+        <h3>16x16 Icon</h3>
+        <canvas id="canvas16" width="16" height="16"></canvas>
+        <button class="download-btn" onclick="downloadIcon(16)">Download icon16.png</button>
+    </div>
+    
+    <div>
+        <h3>48x48 Icon</h3>
+        <canvas id="canvas48" width="48" height="48"></canvas>
+        <button class="download-btn" onclick="downloadIcon(48)">Download icon48.png</button>
+    </div>
+    
+    <div>
+        <h3>128x128 Icon</h3>
+        <canvas id="canvas128" width="128" height="128"></canvas>
+        <button class="download-btn" onclick="downloadIcon(128)">Download icon128.png</button>
+    </div>
+
+    <script>
+        function createIcon(size) {
+            const canvas = document.getElementById(`canvas${size}`);
+            const ctx = canvas.getContext('2d');
+            
+            // Clear canvas
+            ctx.clearRect(0, 0, size, size);
+            
+            // Calculate proportions
+            const margin = Math.max(2, size * 0.1);
+            const bookWidth = size - 2 * margin;
+            const bookHeight = bookWidth * 0.75;
+            const x = margin;
+            const y = (size - bookHeight) / 2;
+            
+            // Book cover (main rectangle)
+            ctx.fillStyle = '#4A90E2';
+            ctx.fillRect(x, y, bookWidth, bookHeight);
+            
+            // Book spine (left edge)
+            const spineWidth = Math.max(1, size * 0.06);
+            ctx.fillStyle = '#2E5A9B';
+            ctx.fillRect(x, y, spineWidth, bookHeight);
+            
+            // Pages (white lines on right)
+            if (size >= 24) {
+                const pageWidth = Math.max(1, size * 0.04);
+                const pageMargin = size * 0.12;
+                ctx.fillStyle = '#FFFFFF';
+                ctx.fillRect(x + bookWidth - pageWidth, y + pageMargin, pageWidth, bookHeight - 2 * pageMargin);
+            }
+            
+            // Title area (white rectangle)
+            if (size >= 32) {
+                const titleWidth = bookWidth * 0.6;
+                const titleHeight = size * 0.05;
+                const titleX = x + (bookWidth - titleWidth) / 2;
+                const titleY = y + size * 0.2;
+                
+                ctx.fillStyle = '#FFFFFF';
+                ctx.fillRect(titleX, titleY, titleWidth, titleHeight);
+                
+                // Subtitle
+                const subtitleWidth = titleWidth * 0.8;
+                const subtitleX = x + (bookWidth - subtitleWidth) / 2;
+                const subtitleY = titleY + size * 0.08;
+                ctx.fillRect(subtitleX, subtitleY, subtitleWidth, titleHeight * 0.7);
+            }
+            
+            // Add small "T" letter for TuVung
+            if (size >= 48) {
+                ctx.fillStyle = '#FFFFFF';
+                ctx.font = `bold ${size * 0.2}px Arial`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('T', x + bookWidth/2, y + bookHeight * 0.7);
+            }
+        }
+        
+        function downloadIcon(size) {
+            const canvas = document.getElementById(`canvas${size}`);
+            const link = document.createElement('a');
+            link.download = `icon${size}.png`;
+            link.href = canvas.toDataURL('image/png');
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+        
+        // Generate all icons on page load
+        window.onload = function() {
+            createIcon(16);
+            createIcon(48);
+            createIcon(128);
+        };
+    </script>
+</body>
+</html>

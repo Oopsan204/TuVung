@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TuVung Extension Test Page</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .word-test {
+            background: #f0f8ff;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            border-left: 4px solid #4A90E2;
+        }
+        .highlight {
+            background-color: yellow;
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+        .instructions {
+            background: #e8f5e8;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .test-words {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 20px 0;
+        }
+        .test-word {
+            background: #4A90E2;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 20px;
+            cursor: pointer;
+            user-select: none;
+        }
+        .test-word:hover {
+            background: #3670B6;
+        }
+    </style>
+</head>
+<body>
+    <h1>TuVung Extension Test Page</h1>
+    
+    <div class="instructions">
+        <h2>🧪 Hướng dẫn test extension</h2>
+        <ol>
+            <li>Đảm bảo TuVung extension đã được cài đặt và enabled</li>
+            <li>Bôi đen bất kỳ từ nào bên dưới</li>
+            <li>Right-click và chọn "Add to TuVung Dictionary"</li>
+            <li>Kiểm tra dialog tra từ tự động xuất hiện</li>
+            <li>Thêm từ và kiểm tra popup extension</li>
+            <li>Mở TuVung app chính để xem auto-sync</li>
+        </ol>
+    </div>
+
+    <div class="word-test">
+        <h3>📖 Test Words for Dictionary</h3>
+        <p>Try highlighting these words: <span class="highlight">serendipity</span>, <span class="highlight">ephemeral</span>, <span class="highlight">ubiquitous</span>, <span class="highlight">paradigm</span>, <span class="highlight">resilience</span></p>
+    </div>
+
+    <div class="word-test">
+        <h3>📚 More Test Vocabulary</h3>
+        <p>Additional words to test: <strong>sophisticated</strong>, <strong>ambiguous</strong>, <strong>inevitable</strong>, <strong>fundamental</strong>, <strong>comprehensive</strong>, <strong>perspective</strong></p>
+    </div>
+
+    <div class="word-test">
+        <h3>🎯 Click-to-Select Words</h3>
+        <div class="test-words">
+            <span class="test-word" onclick="selectWord(this)">innovation</span>
+            <span class="test-word" onclick="selectWord(this)">sustainability</span>
+            <span class="test-word" onclick="selectWord(this)">collaboration</span>
+            <span class="test-word" onclick="selectWord(this)">efficiency</span>
+            <span class="test-word" onclick="selectWord(this)">methodology</span>
+            <span class="test-word" onclick="selectWord(this)">architecture</span>
+            <span class="test-word" onclick="selectWord(this)">optimization</span>
+            <span class="test-word" onclick="selectWord(this)">implementation</span>
+        </div>
+    </div>
+
+    <div class="word-test">
+        <h3>📝 Sample Article for Context</h3>
+        <p>
+            The <strong>digital transformation</strong> of education has brought both <strong>opportunities</strong> and <strong>challenges</strong>. 
+            Modern <strong>technology</strong> enables <strong>interactive</strong> learning experiences that were previously <strong>impossible</strong>. 
+            However, it also requires <strong>adaptation</strong> from both teachers and students. The <strong>implementation</strong> of 
+            new <strong>methodologies</strong> demands careful <strong>consideration</strong> of various <strong>factors</strong> including 
+            accessibility, engagement, and <strong>effectiveness</strong>.
+        </p>
+        <p>
+            <strong>Artificial intelligence</strong> and <strong>machine learning</strong> are becoming increasingly <strong>prevalent</strong> 
+            in educational <strong>applications</strong>. These <strong>technologies</strong> can provide <strong>personalized</strong> 
+            learning experiences, <strong>adaptive</strong> assessments, and <strong>intelligent</strong> tutoring systems that respond 
+            to individual student needs.
+        </p>
+    </div>
+
+    <div class="word-test">
+        <h3>🔧 Extension Features to Test</h3>
+        <ul>
+            <li><strong>Context Menu:</strong> Right-click on highlighted text</li>
+            <li><strong>Auto Lookup:</strong> Check if definitions appear automatically</li>
+            <li><strong>Popup Statistics:</strong> Click extension icon to see word count</li>
+            <li><strong>Recent Words:</strong> Check if newly added words appear in popup</li>
+            <li><strong>Sync Status:</strong> Verify auto-sync with TuVung app</li>
+            <li><strong>Export Function:</strong> Test data export from popup</li>
+        </ul>
+    </div>
+
+    <script>
+        function selectWord(element) {
+            // Select the text in the clicked element
+            const range = document.createRange();
+            range.selectNodeContents(element);
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+            
+            // Highlight the selected element temporarily
+            element.style.background = '#FFD700';
+            setTimeout(() => {
+                element.style.background = '#4A90E2';
+            }, 2000);
+        }
+
+        // Add some dynamic content for testing
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('TuVung Extension Test Page loaded');
+            console.log('Extension should be active on this page');
+            
+            // Test if extension content script is loaded
+            setTimeout(() => {
+                if (window.tuVungExtensionLoaded) {
+                    console.log('✅ TuVung Extension content script detected');
+                } else {
+                    console.log('❌ TuVung Extension content script not detected');
+                }
+            }, 1000);
+        });
+
+        // Listen for messages from extension
+        window.addEventListener('message', function(event) {
+            if (event.data && event.data.source === 'tuVungExtension') {
+                console.log('📨 Message from TuVung Extension:', event.data);
+            }
+        });
+    </script>
+</body>
+</html>

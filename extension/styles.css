@@ -1,0 +1,213 @@
+/* TuVung Extension Content Styles */
+
+#tuvung-overlay {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    background: rgba(0, 0, 0, 0.6) !important;
+    z-index: 999999 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+    backdrop-filter: blur(2px) !important;
+}
+
+.tuvung-dialog {
+    background: white !important;
+    border-radius: 12px !important;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3) !important;
+    width: 500px !important;
+    max-width: 95vw !important;
+    max-height: 90vh !important;
+    overflow-y: auto !important;
+    animation: tuvungFadeIn 0.3s ease-out !important;
+    border: 1px solid #e0e0e0 !important;
+}
+
+@keyframes tuvungFadeIn {
+    from {
+        opacity: 0;
+        transform: scale(0.9) translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+.tuvung-header {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    padding: 20px 24px !important;
+    border-bottom: 1px solid #f0f0f0 !important;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    color: white !important;
+    border-radius: 12px 12px 0 0 !important;
+}
+
+.tuvung-header h3 {
+    margin: 0 !important;
+    font-size: 18px !important;
+    font-weight: 600 !important;
+    color: white !important;
+}
+
+.close-btn {
+    background: rgba(255, 255, 255, 0.2) !important;
+    border: none !important;
+    color: white !important;
+    font-size: 24px !important;
+    cursor: pointer !important;
+    width: 32px !important;
+    height: 32px !important;
+    border-radius: 50% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    transition: background-color 0.2s !important;
+}
+
+.close-btn:hover {
+    background: rgba(255, 255, 255, 0.3) !important;
+}
+
+.tuvung-content {
+    padding: 24px !important;
+}
+
+.form-group {
+    margin-bottom: 16px !important;
+}
+
+.form-row {
+    display: flex !important;
+    gap: 16px !important;
+}
+
+.form-row .form-group {
+    flex: 1 !important;
+}
+
+.form-group label {
+    display: block !important;
+    margin-bottom: 6px !important;
+    font-weight: 600 !important;
+    color: #333 !important;
+    font-size: 14px !important;
+}
+
+.form-group input,
+.form-group textarea,
+.form-group select {
+    width: 100% !important;
+    padding: 12px 16px !important;
+    border: 2px solid #e1e5e9 !important;
+    border-radius: 8px !important;
+    font-size: 14px !important;
+    font-family: inherit !important;
+    transition: border-color 0.2s, box-shadow 0.2s !important;
+    box-sizing: border-box !important;
+    background: white !important;
+    color: #333 !important;
+}
+
+.form-group input:focus,
+.form-group textarea:focus,
+.form-group select:focus {
+    outline: none !important;
+    border-color: #667eea !important;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1) !important;
+}
+
+.form-group textarea {
+    resize: vertical !important;
+    min-height: 80px !important;
+}
+
+.form-group input[readonly] {
+    background: #f8f9fa !important;
+    color: #666 !important;
+}
+
+.button-group {
+    display: flex !important;
+    gap: 12px !important;
+    margin-top: 24px !important;
+}
+
+.btn {
+    padding: 12px 24px !important;
+    border: none !important;
+    border-radius: 8px !important;
+    cursor: pointer !important;
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    transition: all 0.2s !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 8px !important;
+    flex: 1 !important;
+    font-family: inherit !important;
+}
+
+.btn:disabled {
+    opacity: 0.6 !important;
+    cursor: not-allowed !important;
+}
+
+.btn.primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    color: white !important;
+}
+
+.btn.primary:hover:not(:disabled) {
+    transform: translateY(-1px) !important;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3) !important;
+}
+
+.btn.secondary {
+    background: #f8f9fa !important;
+    color: #495057 !important;
+    border: 1px solid #dee2e6 !important;
+}
+
+.btn.secondary:hover:not(:disabled) {
+    background: #e9ecef !important;
+    transform: translateY(-1px) !important;
+}
+
+.source-info {
+    margin-top: 16px !important;
+    padding: 12px 16px !important;
+    background: #f8f9fa !important;
+    border-radius: 8px !important;
+    font-size: 12px !important;
+    color: #666 !important;
+    border-left: 4px solid #667eea !important;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+    .tuvung-dialog {
+        width: 95vw !important;
+        margin: 10px !important;
+    }
+    
+    .form-row {
+        flex-direction: column !important;
+        gap: 16px !important;
+    }
+    
+    .button-group {
+        flex-direction: column !important;
+    }
+    
+    .tuvung-content {
+        padding: 16px !important;
+    }
+}

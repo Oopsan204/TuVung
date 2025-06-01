@@ -422,12 +422,12 @@ function initSRSTab() {
     document.getElementById('srs-hard')?.addEventListener('click', () => rateSRSWord(SRS_DIFFICULTY.HARD));
     document.getElementById('srs-good')?.addEventListener('click', () => rateSRSWord(SRS_DIFFICULTY.GOOD));
     document.getElementById('srs-easy')?.addEventListener('click', () => rateSRSWord(SRS_DIFFICULTY.EASY));
-    
-    // Dashboard event listeners
+      // Dashboard event listeners
     document.getElementById('srs-dashboard-btn')?.addEventListener('click', showSRSDashboard);
     document.getElementById('close-srs-dashboard')?.addEventListener('click', closeSRSDashboard);
     document.getElementById('reset-srs-data')?.addEventListener('click', resetSRSData);
     document.getElementById('export-srs-data')?.addEventListener('click', exportSRSData);
+    document.getElementById('sync-srs-data')?.addEventListener('click', syncSRSData);
 }
 
 function initDictionaryTab() {
@@ -1435,6 +1435,7 @@ function showSRSDashboard() {
     const dueWordsEl = document.getElementById('due-words-stat');
     const learnedWordsEl = document.getElementById('learned-words-stat');
     const accuracyEl = document.getElementById('accuracy-stat');
+    const syncStatusEl = document.getElementById('sync-status-stat');
     
     if (totalWordsEl) totalWordsEl.textContent = stats.totalWords;
     if (studiedWordsEl) studiedWordsEl.textContent = stats.studiedWords;
@@ -1442,6 +1443,25 @@ function showSRSDashboard() {
     if (dueWordsEl) dueWordsEl.textContent = stats.dueWords;
     if (learnedWordsEl) learnedWordsEl.textContent = stats.learnedWords;
     if (accuracyEl) accuracyEl.textContent = stats.averageAccuracy + '%';
+    
+    // Update sync status
+    if (syncStatusEl && SRSManager.checkSyncStatus) {
+        const syncStatus = SRSManager.checkSyncStatus();
+        syncStatusEl.textContent = syncStatus.message;
+        
+        // Update card color based on status
+        const syncCard = document.getElementById('sync-status-card');
+        if (syncCard) {
+            syncCard.className = 'srs-stat-card';
+            if (syncStatus.status === 'enabled') {
+                syncCard.classList.add('sync-enabled');
+            } else if (syncStatus.status === 'no-auth') {
+                syncCard.classList.add('sync-no-auth');
+            } else {
+                syncCard.classList.add('sync-disabled');
+            }
+        }
+    }
     
     // Show dashboard
     const dashboard = document.getElementById('srs-dashboard');
@@ -1492,6 +1512,51 @@ function exportSRSData() {
     } catch (error) {
         console.error('Error exporting SRS data:', error);
         UIManager.showToast('Có lỗi khi xuất dữ liệu SRS!', 'error');
+    }
+}
+
+async function syncSRSData() {
+    console.log('syncSRSData: Bắt đầu đồng bộ dữ liệu SRS...');
+    
+    if (!window.CloudManager) {
+        UIManager.showToast('CloudManager chưa sẵn sàng!', 'error');
+        return;
+    }
+    
+    try {
+        // Hiển thị loading state
+        const syncBtn = document.getElementById('sync-srs-data');
+        const originalText = syncBtn.innerHTML;
+        syncBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang đồng bộ...';
+        syncBtn.disabled = true;
+        
+        // Thực hiện force sync
+        const success = await window.CloudManager.forceSyncData();
+        
+        if (success) {
+            UIManager.showToast('Đồng bộ dữ liệu SRS thành công!', 'success');
+            
+            // Refresh dashboard nếu đang mở
+            const dashboard = document.getElementById('srs-dashboard');
+            if (dashboard && dashboard.style.display === 'flex') {
+                showSRSDashboard(); // Refresh the dashboard
+            }
+        } else {
+            UIManager.showToast('Không thể đồng bộ dữ liệu. Vui lòng kiểm tra kết nối và thông tin đăng nhập.', 'error');
+        }
+        
+        // Khôi phục trạng thái nút
+        syncBtn.innerHTML = originalText;
+        syncBtn.disabled = false;
+        
+    } catch (error) {
+        console.error('Error syncing SRS data:', error);
+        UIManager.showToast('Lỗi khi đồng bộ dữ liệu SRS: ' + error.message, 'error');
+        
+        // Khôi phục trạng thái nút
+        const syncBtn = document.getElementById('sync-srs-data');
+        syncBtn.innerHTML = '<i class="fas fa-cloud-upload-alt"></i> Đồng bộ Cloud';
+        syncBtn.disabled = false;
     }
 }
 

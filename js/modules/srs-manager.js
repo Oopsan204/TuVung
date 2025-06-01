@@ -200,13 +200,43 @@ const SRSManager = {    // Khởi tạo dữ liệu SRS cho một từ
             localStorage.setItem('srsData', JSON.stringify(srsData));
             localStorage.setItem('srsSettings', JSON.stringify(srsSettings));
             
-            // Tự động đồng bộ nếu bật
+            console.log('SRS data saved to localStorage:', {
+                wordsCount: Object.keys(srsData).length,
+                timestamp: new Date().toISOString()
+            });
+            
+            // Tự động đồng bộ nếu bật và có sự thay đổi
             if (window.CloudManager) {
+                console.log('Triggering auto-sync after SRS data change');
                 window.CloudManager.autoSyncData();
+            } else {
+                console.warn('CloudManager not available for auto-sync');
+            }
+            
+            // Cập nhật UI để hiển thị trạng thái mới
+            if (window.UIManager) {
+                window.UIManager.updateSRSStatistics();
             }
         } catch (error) {
             console.error('Lỗi khi lưu dữ liệu SRS:', error);
         }
+    },
+
+    // Kiểm tra trạng thái auto-sync
+    checkSyncStatus() {
+        if (!window.CloudManager) {
+            return { status: 'disabled', message: 'CloudManager not available' };
+        }
+        
+        if (!window.CloudManager.token) {
+            return { status: 'no-auth', message: 'Chưa đăng nhập GitHub' };
+        }
+        
+        if (!window.CloudManager.autoSync) {
+            return { status: 'disabled', message: 'Auto-sync đã tắt' };
+        }
+        
+        return { status: 'enabled', message: 'Auto-sync đã bật' };
     },
 
     // Tải dữ liệu SRS

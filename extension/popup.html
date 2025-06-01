@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="popup-styles.css">
+</head>
+<body>
+    <div class="popup-container">
+        <div class="header">
+            <div class="logo">
+                <h2>🌟 TuVung Helper</h2>
+                <p>Học từ vựng thông minh</p>
+            </div>
+        </div>
+        
+        <div class="stats">
+            <div class="stat-item">
+                <span class="stat-number" id="word-count">0</span>
+                <span class="stat-label">Từ đã lưu</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-number" id="today-count">0</span>
+                <span class="stat-label">Hôm nay</span>
+            </div>
+        </div>
+        
+        <div class="actions">
+            <button id="sync-btn" class="btn primary full-width">
+                <span class="btn-icon">🔄</span>
+                Đồng bộ với TuVung
+            </button>
+            <div class="btn-row">
+                <button id="export-btn" class="btn secondary">
+                    <span class="btn-icon">📤</span>
+                    Xuất dữ liệu
+                </button>
+                <button id="settings-btn" class="btn secondary">
+                    <span class="btn-icon">⚙️</span>
+                    Cài đặt
+                </button>
+            </div>
+            <button id="clear-btn" class="btn danger full-width">
+                <span class="btn-icon">🗑️</span>
+                Xóa tất cả
+            </button>
+        </div>
+        
+        <div class="recent-section">
+            <h3>📚 Từ gần đây</h3>
+            <div id="recent-list" class="recent-list">
+                <div class="empty-state">
+                    <p>Chưa có từ nào được lưu</p>
+                    <small>Highlight từ trên trang web và click chuột phải để thêm từ</small>
+                </div>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <div class="help-text">
+                <small>💡 Tip: Highlight từ trên trang web → Right click → "Thêm vào TuVung"</small>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>⚙️ Cài đặt</h3>
+                <button class="close-btn" id="close-settings">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="setting-item">
+                    <label>
+                        <input type="checkbox" id="auto-lookup"> 
+                        Tự động tra từ khi thêm
+                    </label>
+                </div>
+                <div class="setting-item">
+                    <label>
+                        <input type="checkbox" id="show-notifications"> 
+                        Hiển thị thông báo
+                    </label>
+                </div>
+                <div class="setting-item">
+                    <label for="default-topic">Chủ đề mặc định:</label>
+                    <select id="default-topic">
+                        <option value="General">Tổng quát</option>
+                        <option value="Business">Kinh doanh</option>
+                        <option value="Technology">Công nghệ</option>
+                        <option value="Education">Giáo dục</option>
+                        <option value="Travel">Du lịch</option>
+                        <option value="Food">Ẩm thực</option>
+                        <option value="Sports">Thể thao</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="save-settings" class="btn primary">Lưu cài đặt</button>
+            </div>
+        </div>
+    </div>
+    
+    <script src="popup.js"></script>
+</body>
+</html>

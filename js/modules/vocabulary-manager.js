@@ -290,16 +290,84 @@ const VocabularyManager = {
                 this.data.wordPackages[pkg].splice(index, 1);
             }
         });
-        
-        this.saveToLocalStorage();
+          this.saveToLocalStorage();
         this.updateGlobalVariables();
         
         // Tự động đồng bộ nếu bật
         if (window.CloudManager) {
             window.CloudManager.autoSyncData();
         }
+    },    // Import từ từ Extension
+    importFromExtension(extensionWords) {
+        let imported = 0;
+        let skipped = 0;
+        
+        Object.values(extensionWords).forEach(wordData => {
+            // Kiểm tra từ đã tồn tại chưa
+            if (!this.data.vocabulary[wordData.word]) {
+                // Thêm từ mới - sử dụng cấu trúc đơn giản key-value
+                this.data.vocabulary[wordData.word] = wordData.meaning;
+                
+                // Thêm examples nếu có
+                if (wordData.example) {
+                    if (!this.data.wordExamples) {
+                        this.data.wordExamples = {};
+                    }
+                    this.data.wordExamples[wordData.word] = [wordData.example];
+                }
+                
+                // Thêm vào topic nếu có
+                const topic = wordData.topic || 'Extension Words';
+                if (!this.data.wordTopics[topic]) {
+                    this.data.wordTopics[topic] = [];
+                }
+                if (!this.data.wordTopics[topic].includes(wordData.word)) {
+                    this.data.wordTopics[topic].push(wordData.word);
+                }
+                
+                imported++;
+            } else {
+                skipped++;
+            }
+        });
+        
+        if (imported > 0) {
+            this.saveToLocalStorage();
+            this.updateGlobalVariables();
+            
+            // Tự động đồng bộ nếu bật
+            if (window.CloudManager) {
+                window.CloudManager.autoSyncData();
+            }
+            
+            if (window.UIManager) {
+                const message = skipped > 0
+                    ? `Đã import ${imported} từ mới từ extension! (Bỏ qua ${skipped} từ đã tồn tại)`
+                    : `Đã import ${imported} từ mới từ extension!`;
+                window.UIManager.showToast(message, 'success');
+                window.UIManager.updateDataStatistics();
+            }
+            
+            // Tự động đồng bộ
+            if (window.CloudManager) {
+                window.CloudManager.autoSyncData();
+            }
+        } else {
+            if (window.UIManager) {
+                window.UIManager.showToast('Không có từ mới nào để import!', 'info');
+            }
+        }
+        
+        return { imported, skipped };
     }
 };
+
+// Lắng nghe tin nhắn từ extension để import từ
+window.addEventListener('message', (event) => {
+    if (event.data && event.data.action === 'importFromExtension') {
+        VocabularyManager.importFromExtension(event.data.words);
+    }
+});
 
 // Export VocabularyManager
 window.VocabularyManager = VocabularyManager;

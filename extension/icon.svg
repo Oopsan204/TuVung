@@ -1,0 +1,28 @@
+<!-- Simple SVG icon for TuVung Extension -->
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <defs>
+    <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#667eea;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#764ba2;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Background circle -->
+  <circle cx="64" cy="64" r="60" fill="url(#grad1)" />
+  
+  <!-- Book icon -->
+  <rect x="30" y="35" width="68" height="50" rx="4" fill="white" stroke="none"/>
+  <rect x="35" y="40" width="58" height="40" rx="2" fill="#f8f9fa" stroke="none"/>
+  
+  <!-- Pages -->
+  <line x1="45" y1="50" x2="83" y2="50" stroke="#667eea" stroke-width="2"/>
+  <line x1="45" y1="58" x2="83" y2="58" stroke="#667eea" stroke-width="2"/>
+  <line x1="45" y1="66" x2="75" y2="66" stroke="#667eea" stroke-width="2"/>
+  
+  <!-- Star accent -->
+  <polygon points="64,20 67,30 77,30 69,37 72,47 64,40 56,47 59,37 51,30 61,30" fill="#ffd700"/>
+  
+  <!-- Vietnamese flag accent -->
+  <circle cx="90" cy="90" r="12" fill="#da251d"/>
+  <polygon points="90,85 92,90 97,90 93,93 95,98 90,95 85,98 87,93 83,90 88,90" fill="#ffd700"/>
+</svg>

@@ -2,8 +2,12 @@
 const CloudManager = {
     token: '',
     gistId: '',
-    autoSync: false, // Thêm cài đặt tự động đồng bộ
-    syncTimeout: null, // Timeout cho debounce    // Khởi tạo
+    autoSync: true,  // Bật auto-sync mặc định
+    syncTimeout: null, // Timeout cho debounce
+    lastSyncTime: null, // Thời gian sync cuối cùng
+    syncInProgress: false, // Flag để tránh sync đồng thời
+
+    // Khởi tạo
     async init() {
         this.loadSettings();
         this.setupEventListeners();
@@ -623,24 +627,113 @@ const CloudManager = {
 
     // Tự động đồng bộ với debounce (chờ 3 giây sau thay đổi cuối)
     autoSyncData() {
+        console.log('CloudManager.autoSyncData called with:', {
+            autoSync: this.autoSync,
+            hasToken: !!this.token,
+            syncInProgress: this.syncInProgress
+        });
+        
         if (!this.autoSync || !this.token) {
+            console.log('Auto-sync disabled hoặc chưa có token:', { autoSync: this.autoSync, hasToken: !!this.token });
+            return;
+        }
+
+        if (this.syncInProgress) {
+            console.log('Sync đang trong quá trình, bỏ qua...');
             return;
         }
 
         // Clear timeout cũ nếu có
         if (this.syncTimeout) {
             clearTimeout(this.syncTimeout);
+            console.log('Cleared previous sync timeout');
         }
 
+        console.log('Setting up auto-sync timeout (3 seconds)...');
+        
         // Đặt timeout mới
         this.syncTimeout = setTimeout(async () => {
             try {
-                console.log('Tự động đồng bộ dữ liệu...');
+                this.syncInProgress = true;
+                console.log('Bắt đầu tự động đồng bộ dữ liệu SRS...');
+                
+                // Hiển thị trạng thái sync nhẹ nhàng (không quá nhiều thông báo)
+                if (window.UIManager) {
+                    window.UIManager.showToast('Đang tự động đồng bộ...', 'info');
+                }
+                
                 await this.uploadData();
+                this.lastSyncTime = new Date();
+                
+                console.log('Hoàn thành tự động đồng bộ dữ liệu SRS');
+                
+                // Thông báo thành công nhẹ nhàng
+                if (window.UIManager) {
+                    window.UIManager.showToast('Đã đồng bộ!', 'success');
+                }
             } catch (error) {
                 console.error('Lỗi tự động đồng bộ:', error);
+                if (window.UIManager) {
+                    window.UIManager.showToast('Lỗi khi đồng bộ: ' + error.message, 'error');
+                }
+            } finally {
+                this.syncInProgress = false;
             }
         }, 3000); // Đợi 3 giây sau thay đổi cuối
+    },
+
+    // Kiểm tra và bật auto-sync nếu đã có token
+    enableAutoSyncIfPossible() {
+        if (this.token && !this.autoSync) {
+            this.autoSync = true;
+            this.saveSettings();
+            console.log('Auto-sync đã được bật tự động do có GitHub token');
+            
+            if (window.UIManager) {
+                window.UIManager.showToast('Đã bật tự động đồng bộ', 'success');
+            }
+        }
+    },
+
+    // Sync ngay lập tức (không debounce)
+    async forceSyncData() {
+        if (!this.token) {
+            if (window.UIManager) {
+                window.UIManager.showToast('Vui lòng đăng nhập GitHub trước!', 'warning');
+            }
+            return false;
+        }
+
+        if (this.syncInProgress) {
+            console.log('Sync đang trong quá trình, bỏ qua force sync...');
+            return false;
+        }
+
+        try {
+            this.syncInProgress = true;
+            console.log('Bắt đầu force sync dữ liệu...');
+            
+            if (window.UIManager) {
+                window.UIManager.showToast('Đang đồng bộ dữ liệu...', 'info');
+            }
+            
+            await this.uploadData();
+            this.lastSyncTime = new Date();
+            
+            if (window.UIManager) {
+                window.UIManager.showToast('Đồng bộ hoàn tất!', 'success');
+            }
+            
+            return true;
+        } catch (error) {
+            console.error('Lỗi force sync:', error);
+            if (window.UIManager) {
+                window.UIManager.showToast('Lỗi khi đồng bộ: ' + error.message, 'error');
+            }
+            return false;
+        } finally {
+            this.syncInProgress = false;
+        }
     },
 
     // Xác thực GitHub token
