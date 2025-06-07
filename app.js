@@ -497,7 +497,7 @@ function initGamesTab() {
             }
             
             // Initialize GameManager with required dependencies
-            window.gameManager.init(vocabularyManager, uiManager, audioManager);
+            window.gameManager.init(VocabularyManager, UIManager, AudioManager);
             
             // Show game selection screen
             window.gameManager.showGameSelection();

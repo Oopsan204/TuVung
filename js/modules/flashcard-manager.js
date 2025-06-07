@@ -4,15 +4,21 @@ const FlashcardManager = {
     currentIndex: 0,
     isFlipped: false,    // Khởi tạo
     initialized: false,  // Thêm flag để tránh khởi tạo 2 lần
+    touchStartX: 0,      // Vị trí bắt đầu touch
+    touchStartY: 0,      // Vị trí bắt đầu touch Y
+    touchEndX: 0,        // Vị trí kết thúc touch
+    touchEndY: 0,        // Vị trí kết thúc touch Y
+    minSwipeDistance: 50, // Khoảng cách tối thiểu để được coi là swipe
+    
     init() {
         if (this.initialized) {
             console.log('FlashcardManager: Đã được khởi tạo rồi, bỏ qua...');
             return;
         }
-        console.log('FlashcardManager: Bắt đầu khởi tạo...');
-        this.loadWords();
+        console.log('FlashcardManager: Bắt đầu khởi tạo...');        this.loadWords();
         this.setupEventListeners();
         this.setupKeyboardShortcuts();
+        this.setupTouchGestures(); // Thêm touch gestures cho mobile
         this.initialized = true;
         console.log('FlashcardManager: Hoàn thành khởi tạo');
     },    // Thiết lập event listeners
@@ -41,19 +47,21 @@ const FlashcardManager = {
             console.log('FlashcardManager: Added click listener to flip button');
         } else {
             console.warn('FlashcardManager: flip-flashcard button not found');
-        }
-
-        const speakBtn = document.getElementById('flashcard-speak');
+        }        const speakBtn = document.getElementById('flashcard-speak');
         if (speakBtn) {
-            speakBtn.addEventListener('click', () => this.speakCurrentWord());
+            speakBtn.addEventListener('click', (e) => {
+                e.stopPropagation(); // Ngăn chặn event bubbling để không lật thẻ
+                this.speakCurrentWord();
+            });
             console.log('FlashcardManager: Added click listener to speak button');
         } else {
             console.warn('FlashcardManager: flashcard-speak button not found');
-        }
-
-        const markLearnedBtn = document.getElementById('mark-learned');
+        }        const markLearnedBtn = document.getElementById('mark-learned');
         if (markLearnedBtn) {
-            markLearnedBtn.addEventListener('click', () => this.toggleMarkLearned());
+            markLearnedBtn.addEventListener('click', (e) => {
+                e.stopPropagation(); // Ngăn chặn event bubbling để không lật thẻ
+                this.toggleMarkLearned();
+            });
             console.log('FlashcardManager: Added click listener to mark learned button');
         } else {
             console.warn('FlashcardManager: mark-learned button not found');
@@ -65,20 +73,24 @@ const FlashcardManager = {
             console.log('FlashcardManager: Added click listener to shuffle button');
         } else {
             console.warn('FlashcardManager: shuffle-cards button not found');
-        }
-
-        const hintBtn = document.getElementById('toggle-hint');
+        }        const hintBtn = document.getElementById('toggle-hint');
         if (hintBtn) {
-            hintBtn.addEventListener('click', () => this.toggleHint());
+            hintBtn.addEventListener('click', (e) => {
+                e.stopPropagation(); // Ngăn chặn event bubbling để không lật thẻ
+                this.toggleHint();
+            });
             console.log('FlashcardManager: Added click listener to hint button');
         } else {
             console.warn('FlashcardManager: toggle-hint button not found');
-        }
-
-        // Add click listeners to flashcard faces for flipping
+        }        // Add click listeners to flashcard faces for flipping
         const frontCard = document.getElementById('flashcard-front');
         if (frontCard) {
-            frontCard.addEventListener('click', () => this.flipCard());
+            frontCard.addEventListener('click', (e) => {
+                // Chỉ lật thẻ nếu không click vào button
+                if (!e.target.closest('button')) {
+                    this.flipCard();
+                }
+            });
             console.log('FlashcardManager: Added click listener to front card');
         } else {
             console.warn('FlashcardManager: flashcard-front element not found');
@@ -86,7 +98,12 @@ const FlashcardManager = {
 
         const backCard = document.getElementById('flashcard-back');
         if (backCard) {
-            backCard.addEventListener('click', () => this.flipCard());
+            backCard.addEventListener('click', (e) => {
+                // Chỉ lật thẻ nếu không click vào button
+                if (!e.target.closest('button')) {
+                    this.flipCard();
+                }
+            });
             console.log('FlashcardManager: Added click listener to back card');
         } else {
             console.warn('FlashcardManager: flashcard-back element not found');
@@ -123,8 +140,140 @@ const FlashcardManager = {
                         this.speakCurrentWord();
                     }
                     break;
+            }        });
+    },
+
+    // Thiết lập touch gestures cho mobile
+    setupTouchGestures() {
+        const flashcardContainer = document.querySelector('.flashcard-container');
+        const frontCard = document.getElementById('flashcard-front');
+        const backCard = document.getElementById('flashcard-back');
+        
+        if (!flashcardContainer && !frontCard && !backCard) {
+            console.warn('FlashcardManager: Không tìm thấy flashcard container để setup touch gestures');
+            return;
+        }
+
+        // Sử dụng container chính hoặc front card làm target
+        const touchTarget = flashcardContainer || frontCard;
+        
+        if (touchTarget) {
+            // Touch start
+            touchTarget.addEventListener('touchstart', (e) => {
+                this.handleTouchStart(e);
+            }, { passive: true });
+
+            // Touch end  
+            touchTarget.addEventListener('touchend', (e) => {
+                this.handleTouchEnd(e);
+            }, { passive: true });
+
+            // Prevent context menu on long press
+            touchTarget.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+            });
+
+            console.log('FlashcardManager: Touch gestures đã được thiết lập');
+        }
+        
+        // Thêm touch gestures cho back card nếu có
+        if (backCard && backCard !== touchTarget) {
+            backCard.addEventListener('touchstart', (e) => {
+                this.handleTouchStart(e);
+            }, { passive: true });
+
+            backCard.addEventListener('touchend', (e) => {
+                this.handleTouchEnd(e);
+            }, { passive: true });
+
+            backCard.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+            });
+        }
+    },
+
+    // Xử lý touch start
+    handleTouchStart(e) {
+        // Chỉ xử lý khi đang ở tab flashcard
+        const flashcardTab = document.getElementById('flashcard');
+        if (!flashcardTab || !flashcardTab.classList.contains('active')) return;
+
+        const touch = e.touches[0];
+        this.touchStartX = touch.clientX;
+        this.touchStartY = touch.clientY;
+    },
+
+    // Xử lý touch end
+    handleTouchEnd(e) {
+        // Chỉ xử lý khi đang ở tab flashcard
+        const flashcardTab = document.getElementById('flashcard');
+        if (!flashcardTab || !flashcardTab.classList.contains('active')) return;
+
+        const touch = e.changedTouches[0];
+        this.touchEndX = touch.clientX;
+        this.touchEndY = touch.clientY;
+
+        this.handleSwipeGesture();
+    },
+
+    // Xử lý swipe gesture
+    handleSwipeGesture() {
+        const deltaX = this.touchEndX - this.touchStartX;
+        const deltaY = this.touchEndY - this.touchStartY;
+        const absDeltaX = Math.abs(deltaX);
+        const absDeltaY = Math.abs(deltaY);
+
+        // Lấy active card để thêm visual feedback
+        const activeCard = document.querySelector('.flashcard-card.active') || 
+                          document.getElementById('flashcard-front');
+
+        // Kiểm tra xem có phải là swipe horizontal không (deltaX > deltaY)
+        if (absDeltaX > absDeltaY && absDeltaX > this.minSwipeDistance) {
+            if (deltaX > 0) {
+                // Swipe right - thẻ trước
+                this.addSwipeVisualFeedback(activeCard, 'swipe-right');
+                this.prevCard();
+                this.showSwipeFeedback('⬅️ Thẻ trước');
+            } else {
+                // Swipe left - thẻ tiếp theo
+                this.addSwipeVisualFeedback(activeCard, 'swipe-left');
+                this.nextCard();
+                this.showSwipeFeedback('➡️ Thẻ tiếp theo');
             }
-        });
+        }
+        // Kiểm tra swipe vertical để lật thẻ
+        else if (absDeltaY > absDeltaX && absDeltaY > this.minSwipeDistance) {
+            if (deltaY > 0) {
+                // Swipe down - lật thẻ
+                this.addSwipeVisualFeedback(activeCard, 'swipe-down');
+                this.flipCard();
+                this.showSwipeFeedback('🔄 Đã lật thẻ');
+            } else {
+                // Swipe up - lật thẻ
+                this.addSwipeVisualFeedback(activeCard, 'swipe-up');
+                this.flipCard();
+                this.showSwipeFeedback('🔄 Đã lật thẻ');
+            }
+        }
+    },
+
+    // Thêm visual feedback cho swipe
+    addSwipeVisualFeedback(element, swipeClass) {
+        if (!element) return;
+        
+        element.classList.add(swipeClass);
+        
+        // Xóa class sau một thời gian ngắn
+        setTimeout(() => {
+            element.classList.remove(swipeClass);
+        }, 300);
+    },
+
+    // Hiển thị feedback cho swipe
+    showSwipeFeedback(message) {
+        if (window.UIManager) {
+            window.UIManager.showToast(message, 'info', 1000);
+        }
     },
 
     // Tải danh sách từ

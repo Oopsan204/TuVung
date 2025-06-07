@@ -2455,4 +2455,159 @@ textarea {
     }
 }
 
-/* ================== END SRS DASHBOARD STYLES ================== */
+/* Mobile touch optimization for flashcards */
+@media (max-width: 768px) {
+    .flashcards-container {
+        height: 280px;
+        margin: 20px 0;
+        /* Tăng vùng chạm cho mobile */
+        touch-action: pan-y pinch-zoom;
+    }
+    
+    .flashcard-card {
+        /* Tăng kích thước touch target */
+        min-height: 250px;
+        padding: 15px;
+        /* Tối ưu hóa cho touch */
+        -webkit-tap-highlight-color: transparent;
+        user-select: none;
+        -webkit-user-select: none;
+    }
+    
+    #flashcard-front h2 {
+        font-size: 2.2em;
+    }
+    
+    #flashcard-back h2 {
+        font-size: 1.8em;
+    }
+    
+    .flashcard-controls {
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: 8px;
+        padding: 0 10px;
+    }
+    
+    .flashcard-controls .btn {
+        /* Tăng kích thước nút cho mobile */
+        min-height: 44px;
+        padding: 12px 16px;
+        flex: 1;
+        min-width: 120px;
+        font-size: 14px;
+        /* Tối ưu hóa touch */
+        touch-action: manipulation;
+    }
+    
+    .speak-button {
+        width: 50px;
+        height: 50px;
+        font-size: 18px;
+        /* Tăng vùng chạm */
+        touch-action: manipulation;
+    }
+    
+    .flip-instruction {
+        font-size: 0.85em;
+        bottom: 10px;
+    }
+    
+    /* Thêm visual feedback cho swipe gestures */
+    .flashcard-card::after {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        opacity: 0;
+        pointer-events: none;
+        font-size: 2em;
+        color: var(--primary-color);
+        transition: opacity 0.2s ease;
+        z-index: 10;
+    }
+    
+    /* Animation cho swipe feedback */
+    .flashcard-card.swipe-left::after {
+        content: '➡️';
+        opacity: 1;
+    }
+    
+    .flashcard-card.swipe-right::after {
+        content: '⬅️';
+        opacity: 1;
+    }
+    
+    .flashcard-card.swipe-up::after,
+    .flashcard-card.swipe-down::after {
+        content: '🔄';
+        opacity: 1;
+    }
+}
+
+@media (max-width: 480px) {
+    .flashcards-container {
+        height: 260px;
+        margin: 15px 0;
+    }
+    
+    .flashcard-card {
+        padding: 12px;
+        min-height: 220px;
+    }
+    
+    #flashcard-front h2 {
+        font-size: 1.8em;
+        margin-bottom: 15px;
+    }
+    
+    #flashcard-back h2 {
+        font-size: 1.5em;
+        margin-bottom: 15px;
+    }
+    
+    .flashcard-controls {
+        flex-direction: column;
+        gap: 8px;
+        padding: 0 15px;
+    }
+    
+    .flashcard-controls .btn {
+        width: 100%;
+        min-width: auto;
+        margin-bottom: 5px;
+    }
+    
+    .speak-button {
+        width: 45px;
+        height: 45px;
+        font-size: 16px;
+    }
+    
+    .flashcard-example {
+        font-size: 0.85em;
+        margin-top: 15px;
+    }
+    
+    .flip-instruction {
+        font-size: 0.8em;
+        bottom: 8px;
+    }
+}
+
+/* Touch gesture instructions for mobile */
+@media (max-width: 768px) {
+    .flashcard-section::before {
+        content: '💡 Vuốt trái/phải: chuyển thẻ • Vuốt lên/xuống: lật thẻ';
+        display: block;
+        text-align: center;
+        font-size: 0.85em;
+        color: var(--light-text);
+        background: rgba(52, 152, 219, 0.1);
+        padding: 8px 12px;
+        border-radius: 20px;
+        margin-bottom: 15px;
+        border: 1px solid rgba(52, 152, 219, 0.2);
+    }
+}

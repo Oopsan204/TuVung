@@ -249,13 +249,24 @@ class GameManager {
         } catch (error) {
             console.error('Error loading game stats:', error);
         }
-    }
-
-    /**
+    }    /**
      * Lấy từ vựng cho game
      */
     getGameVocabulary(count = 10, difficulty = 'all') {
-        if (!this.vocabularyManager) return [];
+        if (!this.vocabularyManager || !this.vocabularyManager.getAllWords) {
+            // Fallback to global vocabulary object
+            if (typeof vocabulary !== 'undefined' && vocabulary) {
+                const allWords = Object.values(vocabulary);
+                let filtered = allWords;
+                
+                if (difficulty !== 'all') {
+                    filtered = allWords.filter(word => word.difficulty === difficulty);
+                }
+                
+                return this.shuffleArray(filtered).slice(0, count);
+            }
+            return [];
+        }
         
         const allWords = this.vocabularyManager.getAllWords();
         let filtered = allWords;
@@ -513,20 +524,17 @@ class TypingRaceGame extends BaseGame {
         this.gameType = gameManager.gameTypes.TYPING_RACE;
         this.currentWordIndex = 0;
         this.wordsCompleted = 0;
-    }
-
-    setupGame(options) {
+    }    setupGame(options) {
         this.timeLeft = options.timeLimit || 60;
-        this.vocabulary = this.gameManager.getGameVocabulary(20);        this.currentWordIndex = 0;
+        this.vocabulary = this.gameManager.getGameVocabulary(20);
+        this.currentWordIndex = 0;
         this.wordsCompleted = 0;
     }
 
     renderGame() {
         const container = document.getElementById('games-container');
-        if (!container) return;
-
-        container.innerHTML = `
-            <div class="typing-race-game">&
+        if (!container) return;        container.innerHTML = `
+            <div class="typing-race-game">
                 <div class="game-header">
                     <div class="game-score">💎 ${this.score}</div>
                     <h3>⚡ Đua Gõ Từ</h3>
@@ -660,9 +668,7 @@ class MemoryGame extends BaseGame {
         this.cards = this.createMemoryCards();
         this.flippedCards = [];
         this.matchedPairs = 0;
-    }
-
-    createMemoryCards() {
+    }    createMemoryCards() {
         const cards = [];
         this.vocabulary.forEach((word, index) => {
             // English card
@@ -681,7 +687,9 @@ class MemoryGame extends BaseGame {
             });
         });
         return this.gameManager.shuffleArray(cards);
-    }    renderGame() {
+    }
+
+    renderGame() {
         const container = document.getElementById('games-container');
         if (!container) return;
 
@@ -795,9 +803,8 @@ class WordBuilderGame extends BaseGame {
         const word = this.getCurrentWord();
         this.scrambledLetters = this.scrambleWord(word.english);
         this.selectedLetters = [];
-    }
-
-    scrambleWord(word) {        const letters = word.toLowerCase().split('');
+    }    scrambleWord(word) {
+        const letters = word.toLowerCase().split('');
         return this.gameManager.shuffleArray(letters);
     }
 
@@ -970,14 +977,13 @@ class QuickTranslateGame extends BaseGame {
         this.currentWordIndex = 0;
         this.streak = 0;
         this.maxStreak = 0;
-    }
-
-    setupGame(options) {
+    }    setupGame(options) {
         this.timeLeft = options.timeLimit || 90;
         this.vocabulary = this.gameManager.getGameVocabulary(25);
         this.currentWordIndex = 0;
         this.streak = 0;
-        this.maxStreak = 0;    }
+        this.maxStreak = 0;
+    }
 
     renderGame() {
         const container = document.getElementById('games-container');
