@@ -12,13 +12,12 @@
         <header>
             <h1>Từ vựng tiếng Anh - Oopsan1112</h1>
             <p>Học từ vựng tiếng Anh mọi nơi mọi lúc</p>
-        </header>
-
-        <div class="tabs">
+        </header>        <div class="tabs">
             <button class="tab-button active" data-tab="dictionary">Từ điển</button>
             <button class="tab-button" data-tab="learn">Học từ mới</button>
             <button class="tab-button" data-tab="quiz">Kiểm tra</button>
             <button class="tab-button" data-tab="flashcard">Thẻ ghi nhớ</button>
+            <button class="tab-button" data-tab="games">Trò chơi</button>
             <button class="tab-button" data-tab="topics">Chủ đề</button>
             <button class="tab-button" data-tab="synonyms">Từ đồng nghĩa</button>
             <button class="tab-button" data-tab="settings">Cài đặt</button>
@@ -605,6 +604,11 @@
                         </div>
                     </div>
                 </div>
+            </div>            <!-- Games Tab -->
+            <div class="tab-pane" id="games">
+                <div id="games-container">
+                    <!-- Games content will be dynamically loaded here by GameManager -->
+                </div>
             </div>
 
             <!-- Tab cài đặt -->
@@ -614,6 +618,39 @@
                     <div class="settings-group">
                     </div>
                 </div>
+            </div>        </div>
+    </div>    <!-- SRS Completion Modal -->
+    <div id="srs-completion-container" class="srs-completion-container" style="display: none;">
+        <div class="srs-completion-card">
+            <div class="completion-icon" id="completion-icon">🎉</div>
+            <h2 class="completion-title" id="completion-title">Hoàn thành!</h2>
+            <p class="completion-subtitle" id="completion-subtitle">Phiên học SRS đã kết thúc</p>
+            
+            <div class="completion-stats">
+                <div class="completion-stat">
+                    <div class="completion-stat-value" id="completion-total">0</div>
+                    <div class="completion-stat-label">Tổng từ</div>
+                </div>
+                <div class="completion-stat">
+                    <div class="completion-stat-value" id="completion-correct">0</div>
+                    <div class="completion-stat-label">Trả lời đúng</div>
+                </div>
+                <div class="completion-stat">
+                    <div class="completion-stat-value" id="completion-accuracy">0%</div>
+                    <div class="completion-stat-label">Độ chính xác</div>
+                </div>
+            </div>
+            
+            <div class="completion-actions">
+                <button id="completion-restart" class="btn primary">
+                    <i class="fas fa-redo"></i> Học tiếp
+                </button>
+                <button id="completion-dashboard" class="btn secondary">
+                    <i class="fas fa-chart-bar"></i> Dashboard
+                </button>
+                <button id="completion-close" class="btn secondary">
+                    <i class="fas fa-times"></i> Đóng
+                </button>
             </div>
         </div>
     </div>
@@ -690,8 +727,7 @@
             </div>        </div>
     </div>
 
-    <!-- SRS Dashboard Modal -->
-    <div id="srs-dashboard" class="srs-dashboard">
+    <!-- SRS Dashboard Modal -->    <div id="srs-dashboard" class="srs-dashboard" style="display: none;">
         <div class="srs-dashboard-content">
             <button class="close-dashboard" id="close-srs-dashboard">
                 <i class="fas fa-times"></i>
@@ -754,45 +790,9 @@
     <script src="js/modules/srs-manager.js"></script>
     <script src="js/modules/audio-manager.js"></script>
     <script src="js/modules/ui-manager.js"></script>
-    <script src="js/modules/learning-manager.js"></script>
-    <script src="js/modules/cloud-manager.js"></script>
+    <script src="js/modules/learning-manager.js"></script>    <script src="js/modules/cloud-manager.js"></script>
     <script src="js/modules/quiz-manager.js"></script>
-    <script src="js/modules/flashcard-manager.js"></script>
-      <!-- SRS Completion Modal -->
-    <div id="srs-completion-container" class="srs-completion-container">
-        <div class="srs-completion-card">
-            <div class="completion-icon" id="completion-icon">🎉</div>
-            <h2 class="completion-title" id="completion-title">Hoàn thành!</h2>
-            <p class="completion-subtitle" id="completion-subtitle">Phiên học SRS đã kết thúc</p>
-            
-            <div class="completion-stats">
-                <div class="completion-stat">
-                    <div class="completion-stat-value" id="completion-total">0</div>
-                    <div class="completion-stat-label">Tổng từ</div>
-                </div>
-                <div class="completion-stat">
-                    <div class="completion-stat-value" id="completion-correct">0</div>
-                    <div class="completion-stat-label">Trả lời đúng</div>
-                </div>
-                <div class="completion-stat">
-                    <div class="completion-stat-value" id="completion-accuracy">0%</div>
-                    <div class="completion-stat-label">Độ chính xác</div>
-                </div>
-            </div>
-            
-            <div class="completion-actions">
-                <button id="completion-restart" class="btn primary">
-                    <i class="fas fa-redo"></i> Học tiếp
-                </button>
-                <button id="completion-dashboard" class="btn secondary">
-                    <i class="fas fa-chart-bar"></i> Dashboard
-                </button>
-                <button id="completion-close" class="btn secondary">
-                    <i class="fas fa-times"></i> Đóng
-                </button>
-            </div>
-        </div>
-    </div>
+    <script src="js/modules/flashcard-manager.js"></script>    <script src="js/modules/game-manager.js"></script>
 
     <!-- Main application -->
     <script src="app.js"></script>

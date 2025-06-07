@@ -45,10 +45,10 @@ async function init() {
         initFlashcardTab();
         initQuizTab();
         initTopicsTab();
-        initSynonymsTab();
-        initSRSTab();
+        initSynonymsTab();        initSRSTab();
         initDictionaryTab();
         initSettingsTab();
+        initGamesTab();
         
         // Update dictionary count after all data is loaded
         updateDictionaryCount();
@@ -483,6 +483,53 @@ function initSettingsTab() {
     document.getElementById('voice-select')?.addEventListener('change', () => AudioManager.updateSelectedVoice());
     document.getElementById('save-settings')?.addEventListener('click', saveSettings);
     document.getElementById('reset-settings')?.addEventListener('click', resetSettings);
+}
+
+function initGamesTab() {
+    console.log('Initializing Games tab...');
+    
+    // Initialize GameManager and render games interface
+    if (typeof GameManager !== 'undefined') {
+        try {
+            // Create GameManager instance if not exists
+            if (!window.gameManager) {
+                window.gameManager = new GameManager();
+            }
+            
+            // Initialize GameManager with required dependencies
+            window.gameManager.init(vocabularyManager, uiManager, audioManager);
+            
+            // Show game selection screen
+            window.gameManager.showGameSelection();
+            
+            console.log('GameManager initialized successfully');
+        } catch (error) {
+            console.error('Error initializing GameManager:', error);
+            // Fallback - show a simple message if GameManager fails
+            const gamesContainer = document.getElementById('games-container');
+            if (gamesContainer) {
+                gamesContainer.innerHTML = `
+                    <div style="text-align: center; padding: 40px;">
+                        <h3>🎮 Trò chơi học từ vựng</h3>
+                        <p>Đang tải trò chơi...</p>
+                        <p style="color: #666; font-size: 0.9em;">Vui lòng thử lại sau hoặc tải lại trang</p>
+                    </div>
+                `;
+            }
+        }
+    } else {
+        console.error('GameManager is not defined');
+        const gamesContainer = document.getElementById('games-container');
+        if (gamesContainer) {
+            gamesContainer.innerHTML = `
+                <div style="text-align: center; padding: 40px;">
+                    <h3>🎮 Trò chơi học từ vựng</h3>
+                    <p style="color: #e74c3c;">Không thể tải trò chơi</p>
+                    <p style="color: #666; font-size: 0.9em;">Vui lòng tải lại trang</p>
+                </div>
+            `;
+        }
+    }
 }
 
 // ============= PLACEHOLDER FUNCTIONS (cần implement) =============
@@ -1422,6 +1469,19 @@ function resetSettings() {
 function showSRSDashboard() {
     console.log('showSRSDashboard: Opening SRS dashboard...');
     
+    // Ensure vocabulary data is loaded before calculating statistics
+    if (!vocabulary || Object.keys(vocabulary).length === 0) {
+        console.log('showSRSDashboard: Vocabulary not loaded yet, ensuring VocabularyManager data is available...');
+        VocabularyManager.updateGlobalVariables();
+        
+        // If still empty, show loading state
+        if (!vocabulary || Object.keys(vocabulary).length === 0) {
+            console.warn('showSRSDashboard: Vocabulary data is empty, showing loading state');
+            showSRSDashboardLoadingState();
+            return;
+        }
+    }
+    
     // Ensure SRS data is loaded
     SRSManager.loadSRSData();
     
@@ -1558,6 +1618,38 @@ async function syncSRSData() {
         syncBtn.innerHTML = '<i class="fas fa-cloud-upload-alt"></i> Đồng bộ Cloud';
         syncBtn.disabled = false;
     }
+}
+
+// Show loading state for SRS dashboard when vocabulary data is not available
+function showSRSDashboardLoadingState() {
+    const totalWordsEl = document.getElementById('total-words-stat');
+    const studiedWordsEl = document.getElementById('studied-words-stat');
+    const newWordsEl = document.getElementById('new-words-stat');
+    const dueWordsEl = document.getElementById('due-words-stat');
+    const learnedWordsEl = document.getElementById('learned-words-stat');
+    const accuracyEl = document.getElementById('accuracy-stat');
+    const syncStatusEl = document.getElementById('sync-status-stat');
+    
+    if (totalWordsEl) totalWordsEl.textContent = '---';
+    if (studiedWordsEl) studiedWordsEl.textContent = '---';
+    if (newWordsEl) newWordsEl.textContent = '---';
+    if (dueWordsEl) dueWordsEl.textContent = '---';
+    if (learnedWordsEl) learnedWordsEl.textContent = '---';
+    if (accuracyEl) accuracyEl.textContent = '---%';
+    if (syncStatusEl) syncStatusEl.textContent = 'Đang tải dữ liệu...';
+    
+    // Show dashboard
+    const dashboard = document.getElementById('srs-dashboard');
+    if (dashboard) {
+        dashboard.style.display = 'flex';
+    }
+    
+    // Try to reload the dashboard after a short delay
+    setTimeout(() => {
+        if (vocabulary && Object.keys(vocabulary).length > 0) {
+            showSRSDashboard();
+        }
+    }, 1000);
 }
 
 // ============= EXISTING FUNCTIONS =============
