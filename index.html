@@ -316,10 +316,15 @@
                             </select>
                         </div>
                         <button id="start-quiz" class="btn primary">Bắt đầu kiểm tra</button>
-                    </div>
-                      <div class="quiz-question-section">
+                    </div>                    <div class="quiz-question-section">
                         <div class="quiz-question-card">
-                            <div id="question-number" class="question-number">Câu hỏi 1/10</div>
+                            <div class="quiz-header">
+                                <div id="question-number" class="question-number">Câu hỏi 1/10</div>
+                                <div class="quiz-timer">
+                                    <i class="fas fa-clock"></i>
+                                    <span id="timer-display">40</span>s
+                                </div>
+                            </div>
                             <h3 id="question-text">Chọn gói từ vựng và bấm 'Bắt đầu kiểm tra' để bắt đầu</h3>
                             <div class="quiz-options" id="quiz-options">
                                 <!-- Các lựa chọn sẽ được nạp bằng JavaScript -->

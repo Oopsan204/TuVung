@@ -5,6 +5,9 @@ const QuizManager = {
     selectedAnswer: null,
     answers: [],
     score: 0,
+    timer: null,
+    timeLeft: 40,
+    timePerQuestion: 40,
 
     // Khởi tạo
     init() {
@@ -39,12 +42,11 @@ const QuizManager = {
         }
     },    // Bắt đầu quiz
     startQuiz() {
-        const numQuestions = parseInt(document.getElementById('quiz-count').value) || 10;
+        const quizCountElement = document.getElementById('quiz-count');
+        const numQuestions = quizCountElement ? quizCountElement.value : '10';
         const quizTypeRadio = document.querySelector('input[name="quiz-type"]:checked');
         const questionType = quizTypeRadio ? quizTypeRadio.value : 'eng_to_viet';
-        const selectedPackage = document.getElementById('quiz-package')?.value || 'all';
-
-        // Get vocabulary based on selected package
+        const selectedPackage = document.getElementById('quiz-package')?.value || 'all';        // Get vocabulary based on selected package
         let vocabularyToUse = {};
         if (selectedPackage === 'all') {
             vocabularyToUse = window.vocabulary || {};
@@ -66,6 +68,16 @@ const QuizManager = {
             }
         }
 
+        // Kiểm tra từ vựng
+        if (Object.keys(vocabularyToUse).length === 0) {
+            if (window.UIManager) {
+                window.UIManager.showToast('Không có từ vựng nào để tạo quiz!', 'warning');
+            }
+            return;
+        }
+
+        console.log('Quiz config:', { numQuestions, questionType, selectedPackage, vocabularyCount: Object.keys(vocabularyToUse).length });
+
         this.generateQuestions(numQuestions, questionType, vocabularyToUse);
         this.currentQuestion = 0;
         this.selectedAnswer = null;
@@ -74,6 +86,7 @@ const QuizManager = {
 
         this.showQuizInterface();
         this.showQuestion();
+        this.startTimer(); // Bắt đầu đếm ngược thời gian
     },    // Tạo câu hỏi
     generateQuestions(numQuestions, questionType, vocabularyToUse = null) {
         const vocabulary = vocabularyToUse || window.vocabulary;
@@ -88,9 +101,21 @@ const QuizManager = {
         }
 
         this.questions = [];
-        const usedWords = new Set();
+        const usedWords = new Set();        // Xử lý số lượng câu hỏi
+        let questionCount;
+        if (numQuestions === 'all') {
+            questionCount = words.length;
+        } else {
+            const parsedNum = parseInt(numQuestions);
+            questionCount = isNaN(parsedNum) ? 10 : Math.min(parsedNum, words.length);
+        }
 
-        const questionCount = numQuestions === 'all' ? words.length : Math.min(parseInt(numQuestions), words.length);
+        console.log('Generating quiz:', { 
+            numQuestions, 
+            questionCount, 
+            totalWords: words.length, 
+            questionType 
+        });
 
         for (let i = 0; i < questionCount; i++) {
             let randomWord;
@@ -98,14 +123,21 @@ const QuizManager = {
                 randomWord = words[Math.floor(Math.random() * words.length)];
             } while (usedWords.has(randomWord));
 
-            usedWords.add(randomWord);
-
-            const question = this.createQuestion(randomWord, questionType, words, vocabulary);
+            usedWords.add(randomWord);            const question = this.createQuestion(randomWord, questionType, words, vocabulary);
             if (question) {
                 this.questions.push(question);
             }
         }
-    },    // Tạo một câu hỏi
+
+        console.log(`Generated ${this.questions.length} questions successfully`);
+        
+        if (this.questions.length === 0) {
+            if (window.UIManager) {
+                window.UIManager.showToast('Không thể tạo câu hỏi quiz!', 'error');
+            }
+            return;
+        }
+    },// Tạo một câu hỏi
     createQuestion(word, questionType, allWords, vocabulary) {
         const correctAnswer = vocabulary[word];
         const isEngToViet = questionType === 'mixed' ? Math.random() > 0.5 : questionType === 'eng_to_viet';
@@ -274,6 +306,7 @@ const QuizManager = {
 
         this.currentQuestion++;
         this.showQuestion();
+        this.startTimer(); // Bắt đầu lại bộ đếm thời gian cho câu hỏi tiếp theo
     },
 
     // Nộp bài quiz
@@ -378,7 +411,106 @@ const QuizManager = {
         this.selectedAnswer = null;
         this.answers = [];
         this.score = 0;
-    }
+
+        this.stopTimer(); // Dừng bộ đếm thời gian
+    },
+
+    // Timer methods
+    startTimer() {
+        this.timeLeft = this.timePerQuestion;
+        this.updateTimerDisplay();
+        
+        this.timer = setInterval(() => {
+            this.timeLeft--;
+            this.updateTimerDisplay();
+            
+            if (this.timeLeft <= 0) {
+                this.handleTimeUp();
+            }
+        }, 1000);
+    },
+
+    stopTimer() {
+        if (this.timer) {
+            clearInterval(this.timer);
+            this.timer = null;
+        }
+    },
+
+    updateTimerDisplay() {
+        const timerDisplay = document.getElementById('timer-display');
+        const timerElement = document.querySelector('.quiz-timer');
+        
+        if (timerDisplay) {
+            timerDisplay.textContent = this.timeLeft;
+        }
+        
+        if (timerElement) {
+            // Remove existing warning/danger classes
+            timerElement.classList.remove('warning', 'danger');
+            
+            // Add appropriate class based on time left
+            if (this.timeLeft <= 10) {
+                timerElement.classList.add('danger');
+            } else if (this.timeLeft <= 20) {
+                timerElement.classList.add('warning');
+            }
+        }
+    },
+
+    handleTimeUp() {
+        this.stopTimer();
+        
+        // Auto-submit current question with no answer
+        if (this.selectedAnswer === null) {
+            // Show user that time is up
+            if (window.UIManager) {
+                window.UIManager.showToast('Hết thời gian! Chuyển sang câu tiếp theo.', 'warning');
+            }
+            
+            // Record as incorrect answer
+            const question = this.questions[this.currentQuestion];
+            this.answers.push({
+                question: question.question,
+                userAnswer: 'Không trả lời (hết thời gian)',
+                correctAnswer: question.correctAnswer,
+                isCorrect: false,
+                timeUp: true
+            });
+        } else {
+            // Process the selected answer
+            this.submitCurrentAnswer();
+        }
+        
+        // Move to next question or finish quiz
+        setTimeout(() => {
+            if (this.currentQuestion < this.questions.length - 1) {
+                this.nextQuestion();
+            } else {
+                this.showResults();
+            }
+        }, 1500);
+    },
+
+    submitCurrentAnswer() {
+        if (this.selectedAnswer !== null) {
+            const question = this.questions[this.currentQuestion];
+            const userAnswer = question.options[this.selectedAnswer];
+            const isCorrect = this.selectedAnswer === question.correctIndex;
+            
+            if (isCorrect) {
+                this.score++;
+            }
+            
+            this.answers.push({
+                question: question.question,
+                userAnswer: userAnswer,
+                correctAnswer: question.correctAnswer,
+                isCorrect: isCorrect,
+                timeUp: false
+            });
+        }
+    },
 };
 
 // Export QuizManager
