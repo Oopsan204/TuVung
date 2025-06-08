@@ -3,13 +3,18 @@ const FlashcardManager = {
     words: [],
     currentIndex: 0,
     isFlipped: false,    // Khởi tạo
-    initialized: false,  // Thêm flag để tránh khởi tạo 2 lần
-    touchStartX: 0,      // Vị trí bắt đầu touch
+    initialized: false,  // Thêm flag để tránh khởi tạo 2 lần    touchStartX: 0,      // Vị trí bắt đầu touch
     touchStartY: 0,      // Vị trí bắt đầu touch Y
     touchEndX: 0,        // Vị trí kết thúc touch
     touchEndY: 0,        // Vị trí kết thúc touch Y
     minSwipeDistance: 50, // Khoảng cách tối thiểu để được coi là swipe
+    isSwiping: false,    // Flag để theo dõi trạng thái swipe
+    swipeStartTime: 0,   // Thời gian bắt đầu touch
     
+    // Debug touch events
+    debugTouchEvents: 0,
+    lastGesture: 'None',
+
     init() {
         if (this.initialized) {
             console.log('FlashcardManager: Đã được khởi tạo rồi, bỏ qua...');
@@ -19,6 +24,7 @@ const FlashcardManager = {
         this.setupEventListeners();
         this.setupKeyboardShortcuts();
         this.setupTouchGestures(); // Thêm touch gestures cho mobile
+        this.setupDebugPanel(); // Thiết lập debug panel
         this.initialized = true;
         console.log('FlashcardManager: Hoàn thành khởi tạo');
     },    // Thiết lập event listeners
@@ -141,66 +147,97 @@ const FlashcardManager = {
                     }
                     break;
             }        });
-    },
-
-    // Thiết lập touch gestures cho mobile
+    },    // Thiết lập touch gestures cho mobile
     setupTouchGestures() {
-        const flashcardContainer = document.querySelector('.flashcard-container');
+        const flashcardContainer = document.querySelector('.flashcards-container');
         const frontCard = document.getElementById('flashcard-front');
         const backCard = document.getElementById('flashcard-back');
+        
+        console.log('Setting up touch gestures...');
+        console.log('Container found:', !!flashcardContainer);
+        console.log('Front card found:', !!frontCard);
+        console.log('Back card found:', !!backCard);
+        console.log('Is mobile device:', this.isMobileDevice());
         
         if (!flashcardContainer && !frontCard && !backCard) {
             console.warn('FlashcardManager: Không tìm thấy flashcard container để setup touch gestures');
             return;
         }
 
-        // Sử dụng container chính hoặc front card làm target
-        const touchTarget = flashcardContainer || frontCard;
+        // Sử dụng container chính làm target chính
+        const touchTarget = flashcardContainer;
         
         if (touchTarget) {
-            // Touch start
+            // Touch start - không passive để có thể preventDefault
             touchTarget.addEventListener('touchstart', (e) => {
+                console.log('Touch start event on container');
                 this.handleTouchStart(e);
-            }, { passive: true });
+            }, { passive: false });
 
-            // Touch end  
+            // Touch move - ngăn chặn scroll khi swipe
+            touchTarget.addEventListener('touchmove', (e) => {
+                if (this.isSwiping) {
+                    e.preventDefault();
+                    console.log('Prevented scroll during swipe');
+                }
+            }, { passive: false });
+
+            // Touch end - không passive
             touchTarget.addEventListener('touchend', (e) => {
+                console.log('Touch end event on container');
                 this.handleTouchEnd(e);
-            }, { passive: true });
+            }, { passive: false });
 
             // Prevent context menu on long press
             touchTarget.addEventListener('contextmenu', (e) => {
                 e.preventDefault();
             });
 
-            console.log('FlashcardManager: Touch gestures đã được thiết lập');
+            console.log('FlashcardManager: Touch gestures đã được thiết lập cho container');
         }
         
-        // Thêm touch gestures cho back card nếu có
-        if (backCard && backCard !== touchTarget) {
-            backCard.addEventListener('touchstart', (e) => {
-                this.handleTouchStart(e);
-            }, { passive: true });
+        // Thêm touch gestures cho cả hai thẻ
+        [frontCard, backCard].forEach((card, index) => {
+            if (card) {
+                card.addEventListener('touchstart', (e) => {
+                    console.log(`Touch start on card ${index === 0 ? 'front' : 'back'}`);
+                    this.handleTouchStart(e);
+                }, { passive: false });
 
-            backCard.addEventListener('touchend', (e) => {
-                this.handleTouchEnd(e);
-            }, { passive: true });
+                card.addEventListener('touchmove', (e) => {
+                    if (this.isSwiping) {
+                        e.preventDefault();
+                    }
+                }, { passive: false });
 
-            backCard.addEventListener('contextmenu', (e) => {
-                e.preventDefault();
-            });
-        }
-    },
+                card.addEventListener('touchend', (e) => {
+                    console.log(`Touch end on card ${index === 0 ? 'front' : 'back'}`);
+                    this.handleTouchEnd(e);
+                }, { passive: false });
 
-    // Xử lý touch start
+                card.addEventListener('contextmenu', (e) => {
+                    e.preventDefault();
+                });
+                
+                console.log(`Touch events added to ${index === 0 ? 'front' : 'back'} card`);
+            }
+        });
+    },// Xử lý touch start
     handleTouchStart(e) {
         // Chỉ xử lý khi đang ở tab flashcard
         const flashcardTab = document.getElementById('flashcard');
         if (!flashcardTab || !flashcardTab.classList.contains('active')) return;
 
+        // Không xử lý nếu touch vào button
+        if (e.target.closest('button')) return;
+
         const touch = e.touches[0];
         this.touchStartX = touch.clientX;
         this.touchStartY = touch.clientY;
+        this.isSwiping = false;
+        this.swipeStartTime = Date.now();
+        
+        console.log('Touch start:', this.touchStartX, this.touchStartY);
     },
 
     // Xử lý touch end
@@ -209,19 +246,34 @@ const FlashcardManager = {
         const flashcardTab = document.getElementById('flashcard');
         if (!flashcardTab || !flashcardTab.classList.contains('active')) return;
 
+        // Không xử lý nếu touch vào button
+        if (e.target.closest('button')) return;
+
         const touch = e.changedTouches[0];
         this.touchEndX = touch.clientX;
         this.touchEndY = touch.clientY;
-
-        this.handleSwipeGesture();
-    },
-
-    // Xử lý swipe gesture
+        
+        const touchDuration = Date.now() - this.swipeStartTime;
+        
+        console.log('Touch end:', this.touchEndX, this.touchEndY, 'Duration:', touchDuration);
+        
+        // Chỉ xử lý swipe nếu thời gian touch hợp lý (không quá lâu)
+        if (touchDuration < 1000) {
+            this.handleSwipeGesture();
+        }
+        
+        this.isSwiping = false;
+    },    // Xử lý swipe gesture
     handleSwipeGesture() {
         const deltaX = this.touchEndX - this.touchStartX;
         const deltaY = this.touchEndY - this.touchStartY;
         const absDeltaX = Math.abs(deltaX);
         const absDeltaY = Math.abs(deltaY);
+
+        console.log('Swipe detection:', {
+            deltaX, deltaY, absDeltaX, absDeltaY,
+            minDistance: this.minSwipeDistance
+        });
 
         // Lấy active card để thêm visual feedback
         const activeCard = document.querySelector('.flashcard-card.active') || 
@@ -229,13 +281,16 @@ const FlashcardManager = {
 
         // Kiểm tra xem có phải là swipe horizontal không (deltaX > deltaY)
         if (absDeltaX > absDeltaY && absDeltaX > this.minSwipeDistance) {
+            this.isSwiping = true;
             if (deltaX > 0) {
                 // Swipe right - thẻ trước
+                console.log('Swipe right detected');
                 this.addSwipeVisualFeedback(activeCard, 'swipe-right');
                 this.prevCard();
                 this.showSwipeFeedback('⬅️ Thẻ trước');
             } else {
                 // Swipe left - thẻ tiếp theo
+                console.log('Swipe left detected');
                 this.addSwipeVisualFeedback(activeCard, 'swipe-left');
                 this.nextCard();
                 this.showSwipeFeedback('➡️ Thẻ tiếp theo');
@@ -243,17 +298,22 @@ const FlashcardManager = {
         }
         // Kiểm tra swipe vertical để lật thẻ
         else if (absDeltaY > absDeltaX && absDeltaY > this.minSwipeDistance) {
+            this.isSwiping = true;
             if (deltaY > 0) {
                 // Swipe down - lật thẻ
+                console.log('Swipe down detected');
                 this.addSwipeVisualFeedback(activeCard, 'swipe-down');
                 this.flipCard();
                 this.showSwipeFeedback('🔄 Đã lật thẻ');
             } else {
                 // Swipe up - lật thẻ
+                console.log('Swipe up detected');
                 this.addSwipeVisualFeedback(activeCard, 'swipe-up');
                 this.flipCard();
                 this.showSwipeFeedback('🔄 Đã lật thẻ');
             }
+        } else {
+            console.log('No swipe detected - distance too small');
         }
     },
 
@@ -568,7 +628,86 @@ const FlashcardManager = {
     // Cập nhật gói từ vựng
     updatePackage() {
         this.loadWords();
-    }
+    },
+
+    // Kiểm tra xem có phải là thiết bị mobile thật không
+    isMobileDevice() {
+        // Kiểm tra user agent
+        const userAgent = navigator.userAgent || navigator.vendor || window.opera;
+        const mobileRegex = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i;
+        
+        // Kiểm tra touch capability
+        const hasTouch = 'ontouchstart' in window || 
+                        navigator.maxTouchPoints > 0 || 
+                        navigator.msMaxTouchPoints > 0;
+        
+        // Kiểm tra screen size
+        const isSmallScreen = window.innerWidth <= 768;
+        
+        const isMobile = mobileRegex.test(userAgent) && hasTouch;
+        
+        console.log('Mobile detection:', {
+            userAgent: userAgent,
+            hasTouch: hasTouch,
+            isSmallScreen: isSmallScreen,
+            isMobile: isMobile
+        });
+        
+        return isMobile;
+    },
+
+    // Cập nhật debug info
+    updateDebugInfo() {
+        const touchEventsEl = document.getElementById('touch-events');
+        const lastGestureEl = document.getElementById('last-gesture');
+        const deviceTypeEl = document.getElementById('device-type');
+        
+        if (touchEventsEl) touchEventsEl.textContent = this.debugTouchEvents;
+        if (lastGestureEl) lastGestureEl.textContent = this.lastGesture;
+        if (deviceTypeEl) deviceTypeEl.textContent = this.isMobileDevice() ? 'Mobile' : 'Desktop';
+    },
+
+    // Setup debug panel
+    setupDebugPanel() {
+        // Show debug panel on mobile or when requested
+        const shouldShowDebug = this.isMobileDevice() || window.location.hash === '#debug';
+        
+        if (shouldShowDebug) {
+            const debugPanel = document.getElementById('touch-debug');
+            if (debugPanel) {
+                debugPanel.style.display = 'block';
+                this.updateDebugInfo();
+            }
+        }
+        
+        // Toggle debug button
+        const toggleDebugBtn = document.getElementById('toggle-debug');
+        if (toggleDebugBtn) {
+            toggleDebugBtn.addEventListener('click', () => {
+                const debugPanel = document.getElementById('touch-debug');
+                if (debugPanel) {
+                    const isVisible = debugPanel.style.display !== 'none';
+                    debugPanel.style.display = isVisible ? 'none' : 'block';
+                    toggleDebugBtn.textContent = isVisible ? 'Hiện Debug' : 'Ẩn Debug';
+                }
+            });
+        }
+        
+        // Double tap to show/hide debug
+        let lastTap = 0;
+        document.addEventListener('touchend', (e) => {
+            const currentTime = new Date().getTime();
+            const tapLength = currentTime - lastTap;
+            if (tapLength < 500 && tapLength > 0) {
+                const debugPanel = document.getElementById('touch-debug');
+                if (debugPanel) {
+                    const isVisible = debugPanel.style.display !== 'none';
+                    debugPanel.style.display = isVisible ? 'none' : 'block';
+                }
+            }
+            lastTap = currentTime;
+        });
+    },
 };
 
 // Export FlashcardManager
