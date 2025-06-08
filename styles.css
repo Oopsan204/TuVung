@@ -2626,31 +2626,6 @@ textarea {
     }
 }
 
-/* Touch Debug Panel */
-.touch-debug-panel {
-    background: rgba(0, 0, 0, 0.9);
-    color: white;
-    padding: 15px;
-    border-radius: 8px;
-    margin: 20px 0;
-    font-size: 12px;
-    text-align: left;
-}
-
-.touch-debug-panel h4 {
-    margin: 0 0 10px 0;
-    color: #fff;
-}
-
-.touch-debug-panel p {
-    margin: 5px 0;
-}
-
-.touch-debug-panel span {
-    color: #4CAF50;
-    font-weight: bold;
-}
-
 /* Mobile debug toggle */
 @media (max-width: 768px) {
     .flashcard-section::after {

@@ -3,38 +3,28 @@ const FlashcardManager = {
     words: [],
     currentIndex: 0,
     isFlipped: false,    // Khởi tạo
-    initialized: false,  // Thêm flag để tránh khởi tạo 2 lần    touchStartX: 0,      // Vị trí bắt đầu touch
+    initialized: false,  // Thêm flag để tránh khởi tạo 2 lần
+    touchStartX: 0,      // Vị trí bắt đầu touch
     touchStartY: 0,      // Vị trí bắt đầu touch Y
     touchEndX: 0,        // Vị trí kết thúc touch
     touchEndY: 0,        // Vị trí kết thúc touch Y
     minSwipeDistance: 50, // Khoảng cách tối thiểu để được coi là swipe
-    isSwiping: false,    // Flag để theo dõi trạng thái swipe
-    swipeStartTime: 0,   // Thời gian bắt đầu touch
-    
-    // Debug touch events
-    debugTouchEvents: 0,
-    lastGesture: 'None',
+    isSwiping: false,    // Flag để theo dõi trạng thái swipe    swipeStartTime: 0,   // Thời gian bắt đầu touch
 
     init() {
         if (this.initialized) {
-            console.log('FlashcardManager: Đã được khởi tạo rồi, bỏ qua...');
             return;
         }
-        console.log('FlashcardManager: Bắt đầu khởi tạo...');        this.loadWords();
+        this.loadWords();
         this.setupEventListeners();
         this.setupKeyboardShortcuts();
         this.setupTouchGestures(); // Thêm touch gestures cho mobile
-        this.setupDebugPanel(); // Thiết lập debug panel
         this.initialized = true;
-        console.log('FlashcardManager: Hoàn thành khởi tạo');
     },    // Thiết lập event listeners
     setupEventListeners() {
-        console.log('FlashcardManager: Setting up event listeners...');
-        
         const nextBtn = document.getElementById('next-flashcard');
         if (nextBtn) {
             nextBtn.addEventListener('click', () => this.nextCard());
-            console.log('FlashcardManager: Added click listener to next button');
         } else {
             console.warn('FlashcardManager: next-flashcard button not found');
         }
@@ -42,7 +32,6 @@ const FlashcardManager = {
         const prevBtn = document.getElementById('prev-flashcard');
         if (prevBtn) {
             prevBtn.addEventListener('click', () => this.prevCard());
-            console.log('FlashcardManager: Added click listener to prev button');
         } else {
             console.warn('FlashcardManager: prev-flashcard button not found');
         }
@@ -50,7 +39,6 @@ const FlashcardManager = {
         const flipBtn = document.getElementById('flip-flashcard');
         if (flipBtn) {
             flipBtn.addEventListener('click', () => this.flipCard());
-            console.log('FlashcardManager: Added click listener to flip button');
         } else {
             console.warn('FlashcardManager: flip-flashcard button not found');
         }        const speakBtn = document.getElementById('flashcard-speak');
@@ -59,16 +47,16 @@ const FlashcardManager = {
                 e.stopPropagation(); // Ngăn chặn event bubbling để không lật thẻ
                 this.speakCurrentWord();
             });
-            console.log('FlashcardManager: Added click listener to speak button');
         } else {
             console.warn('FlashcardManager: flashcard-speak button not found');
-        }        const markLearnedBtn = document.getElementById('mark-learned');
+        }
+
+        const markLearnedBtn = document.getElementById('mark-learned');
         if (markLearnedBtn) {
             markLearnedBtn.addEventListener('click', (e) => {
                 e.stopPropagation(); // Ngăn chặn event bubbling để không lật thẻ
                 this.toggleMarkLearned();
             });
-            console.log('FlashcardManager: Added click listener to mark learned button');
         } else {
             console.warn('FlashcardManager: mark-learned button not found');
         }
@@ -76,7 +64,6 @@ const FlashcardManager = {
         const shuffleBtn = document.getElementById('shuffle-cards');
         if (shuffleBtn) {
             shuffleBtn.addEventListener('click', () => this.shuffleCards());
-            console.log('FlashcardManager: Added click listener to shuffle button');
         } else {
             console.warn('FlashcardManager: shuffle-cards button not found');
         }        const hintBtn = document.getElementById('toggle-hint');
@@ -85,10 +72,11 @@ const FlashcardManager = {
                 e.stopPropagation(); // Ngăn chặn event bubbling để không lật thẻ
                 this.toggleHint();
             });
-            console.log('FlashcardManager: Added click listener to hint button');
         } else {
             console.warn('FlashcardManager: toggle-hint button not found');
-        }        // Add click listeners to flashcard faces for flipping
+        }
+
+        // Add click listeners to flashcard faces for flipping
         const frontCard = document.getElementById('flashcard-front');
         if (frontCard) {
             frontCard.addEventListener('click', (e) => {
@@ -97,7 +85,6 @@ const FlashcardManager = {
                     this.flipCard();
                 }
             });
-            console.log('FlashcardManager: Added click listener to front card');
         } else {
             console.warn('FlashcardManager: flashcard-front element not found');
         }
@@ -110,12 +97,9 @@ const FlashcardManager = {
                     this.flipCard();
                 }
             });
-            console.log('FlashcardManager: Added click listener to back card');
         } else {
             console.warn('FlashcardManager: flashcard-back element not found');
         }
-        
-        console.log('FlashcardManager: Finished setting up event listeners');
     },// Thiết lập phím tắt
     setupKeyboardShortcuts() {
         document.addEventListener('keydown', (e) => {
@@ -153,14 +137,7 @@ const FlashcardManager = {
         const frontCard = document.getElementById('flashcard-front');
         const backCard = document.getElementById('flashcard-back');
         
-        console.log('Setting up touch gestures...');
-        console.log('Container found:', !!flashcardContainer);
-        console.log('Front card found:', !!frontCard);
-        console.log('Back card found:', !!backCard);
-        console.log('Is mobile device:', this.isMobileDevice());
-        
         if (!flashcardContainer && !frontCard && !backCard) {
-            console.warn('FlashcardManager: Không tìm thấy flashcard container để setup touch gestures');
             return;
         }
 
@@ -170,7 +147,6 @@ const FlashcardManager = {
         if (touchTarget) {
             // Touch start - không passive để có thể preventDefault
             touchTarget.addEventListener('touchstart', (e) => {
-                console.log('Touch start event on container');
                 this.handleTouchStart(e);
             }, { passive: false });
 
@@ -178,13 +154,11 @@ const FlashcardManager = {
             touchTarget.addEventListener('touchmove', (e) => {
                 if (this.isSwiping) {
                     e.preventDefault();
-                    console.log('Prevented scroll during swipe');
                 }
             }, { passive: false });
 
             // Touch end - không passive
             touchTarget.addEventListener('touchend', (e) => {
-                console.log('Touch end event on container');
                 this.handleTouchEnd(e);
             }, { passive: false });
 
@@ -192,15 +166,12 @@ const FlashcardManager = {
             touchTarget.addEventListener('contextmenu', (e) => {
                 e.preventDefault();
             });
-
-            console.log('FlashcardManager: Touch gestures đã được thiết lập cho container');
         }
         
         // Thêm touch gestures cho cả hai thẻ
         [frontCard, backCard].forEach((card, index) => {
             if (card) {
                 card.addEventListener('touchstart', (e) => {
-                    console.log(`Touch start on card ${index === 0 ? 'front' : 'back'}`);
                     this.handleTouchStart(e);
                 }, { passive: false });
 
@@ -211,18 +182,15 @@ const FlashcardManager = {
                 }, { passive: false });
 
                 card.addEventListener('touchend', (e) => {
-                    console.log(`Touch end on card ${index === 0 ? 'front' : 'back'}`);
                     this.handleTouchEnd(e);
                 }, { passive: false });
 
                 card.addEventListener('contextmenu', (e) => {
                     e.preventDefault();
                 });
-                
-                console.log(`Touch events added to ${index === 0 ? 'front' : 'back'} card`);
             }
         });
-    },// Xử lý touch start
+    },    // Xử lý touch start
     handleTouchStart(e) {
         // Chỉ xử lý khi đang ở tab flashcard
         const flashcardTab = document.getElementById('flashcard');
@@ -236,8 +204,6 @@ const FlashcardManager = {
         this.touchStartY = touch.clientY;
         this.isSwiping = false;
         this.swipeStartTime = Date.now();
-        
-        console.log('Touch start:', this.touchStartX, this.touchStartY);
     },
 
     // Xử lý touch end
@@ -255,8 +221,6 @@ const FlashcardManager = {
         
         const touchDuration = Date.now() - this.swipeStartTime;
         
-        console.log('Touch end:', this.touchEndX, this.touchEndY, 'Duration:', touchDuration);
-        
         // Chỉ xử lý swipe nếu thời gian touch hợp lý (không quá lâu)
         if (touchDuration < 1000) {
             this.handleSwipeGesture();
@@ -270,30 +234,19 @@ const FlashcardManager = {
         const absDeltaX = Math.abs(deltaX);
         const absDeltaY = Math.abs(deltaY);
 
-        console.log('Swipe detection:', {
-            deltaX, deltaY, absDeltaX, absDeltaY,
-            minDistance: this.minSwipeDistance
-        });
-
         // Lấy active card để thêm visual feedback
         const activeCard = document.querySelector('.flashcard-card.active') || 
-                          document.getElementById('flashcard-front');
-
-        // Kiểm tra xem có phải là swipe horizontal không (deltaX > deltaY)
+                          document.getElementById('flashcard-front');        // Kiểm tra xem có phải là swipe horizontal không (deltaX > deltaY)
         if (absDeltaX > absDeltaY && absDeltaX > this.minSwipeDistance) {
             this.isSwiping = true;
             if (deltaX > 0) {
                 // Swipe right - thẻ trước
-                console.log('Swipe right detected');
                 this.addSwipeVisualFeedback(activeCard, 'swipe-right');
                 this.prevCard();
-                this.showSwipeFeedback('⬅️ Thẻ trước');
             } else {
                 // Swipe left - thẻ tiếp theo
-                console.log('Swipe left detected');
                 this.addSwipeVisualFeedback(activeCard, 'swipe-left');
                 this.nextCard();
-                this.showSwipeFeedback('➡️ Thẻ tiếp theo');
             }
         }
         // Kiểm tra swipe vertical để lật thẻ
@@ -301,23 +254,15 @@ const FlashcardManager = {
             this.isSwiping = true;
             if (deltaY > 0) {
                 // Swipe down - lật thẻ
-                console.log('Swipe down detected');
                 this.addSwipeVisualFeedback(activeCard, 'swipe-down');
                 this.flipCard();
-                this.showSwipeFeedback('🔄 Đã lật thẻ');
             } else {
                 // Swipe up - lật thẻ
-                console.log('Swipe up detected');
                 this.addSwipeVisualFeedback(activeCard, 'swipe-up');
                 this.flipCard();
-                this.showSwipeFeedback('🔄 Đã lật thẻ');
             }
-        } else {
-            console.log('No swipe detected - distance too small');
         }
-    },
-
-    // Thêm visual feedback cho swipe
+    },    // Thêm visual feedback cho swipe
     addSwipeVisualFeedback(element, swipeClass) {
         if (!element) return;
         
@@ -327,13 +272,6 @@ const FlashcardManager = {
         setTimeout(() => {
             element.classList.remove(swipeClass);
         }, 300);
-    },
-
-    // Hiển thị feedback cho swipe
-    showSwipeFeedback(message) {
-        if (window.UIManager) {
-            window.UIManager.showToast(message, 'info', 1000);
-        }
     },
 
     // Tải danh sách từ
@@ -442,9 +380,7 @@ const FlashcardManager = {
         return examples[word] || `This is an example with "${word}".`;
     },    // Lật thẻ
     flipCard() {
-        console.log('FlashcardManager: flipCard được gọi, isFlipped hiện tại:', this.isFlipped);
         this.isFlipped = !this.isFlipped;
-        console.log('FlashcardManager: isFlipped mới:', this.isFlipped);
         this.updateFlipState();
         
         // Force update by triggering reflow
@@ -452,7 +388,7 @@ const FlashcardManager = {
         const backCard = document.getElementById('flashcard-back');
         if (frontCard) frontCard.offsetHeight; // Trigger reflow
         if (backCard) backCard.offsetHeight; // Trigger reflow
-    },    // Cập nhật trạng thái lật thẻ
+    },// Cập nhật trạng thái lật thẻ
     updateFlipState() {
         console.log('FlashcardManager: updateFlipState được gọi, isFlipped:', this.isFlipped);
         const frontCard = document.getElementById('flashcard-front');
@@ -623,90 +559,9 @@ const FlashcardManager = {
         if (progressText) {
             progressText.textContent = 'Không có từ vựng để hiển thị';
         }
-    },
-
-    // Cập nhật gói từ vựng
+    },    // Cập nhật gói từ vựng
     updatePackage() {
         this.loadWords();
-    },
-
-    // Kiểm tra xem có phải là thiết bị mobile thật không
-    isMobileDevice() {
-        // Kiểm tra user agent
-        const userAgent = navigator.userAgent || navigator.vendor || window.opera;
-        const mobileRegex = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i;
-        
-        // Kiểm tra touch capability
-        const hasTouch = 'ontouchstart' in window || 
-                        navigator.maxTouchPoints > 0 || 
-                        navigator.msMaxTouchPoints > 0;
-        
-        // Kiểm tra screen size
-        const isSmallScreen = window.innerWidth <= 768;
-        
-        const isMobile = mobileRegex.test(userAgent) && hasTouch;
-        
-        console.log('Mobile detection:', {
-            userAgent: userAgent,
-            hasTouch: hasTouch,
-            isSmallScreen: isSmallScreen,
-            isMobile: isMobile
-        });
-        
-        return isMobile;
-    },
-
-    // Cập nhật debug info
-    updateDebugInfo() {
-        const touchEventsEl = document.getElementById('touch-events');
-        const lastGestureEl = document.getElementById('last-gesture');
-        const deviceTypeEl = document.getElementById('device-type');
-        
-        if (touchEventsEl) touchEventsEl.textContent = this.debugTouchEvents;
-        if (lastGestureEl) lastGestureEl.textContent = this.lastGesture;
-        if (deviceTypeEl) deviceTypeEl.textContent = this.isMobileDevice() ? 'Mobile' : 'Desktop';
-    },
-
-    // Setup debug panel
-    setupDebugPanel() {
-        // Show debug panel on mobile or when requested
-        const shouldShowDebug = this.isMobileDevice() || window.location.hash === '#debug';
-        
-        if (shouldShowDebug) {
-            const debugPanel = document.getElementById('touch-debug');
-            if (debugPanel) {
-                debugPanel.style.display = 'block';
-                this.updateDebugInfo();
-            }
-        }
-        
-        // Toggle debug button
-        const toggleDebugBtn = document.getElementById('toggle-debug');
-        if (toggleDebugBtn) {
-            toggleDebugBtn.addEventListener('click', () => {
-                const debugPanel = document.getElementById('touch-debug');
-                if (debugPanel) {
-                    const isVisible = debugPanel.style.display !== 'none';
-                    debugPanel.style.display = isVisible ? 'none' : 'block';
-                    toggleDebugBtn.textContent = isVisible ? 'Hiện Debug' : 'Ẩn Debug';
-                }
-            });
-        }
-        
-        // Double tap to show/hide debug
-        let lastTap = 0;
-        document.addEventListener('touchend', (e) => {
-            const currentTime = new Date().getTime();
-            const tapLength = currentTime - lastTap;
-            if (tapLength < 500 && tapLength > 0) {
-                const debugPanel = document.getElementById('touch-debug');
-                if (debugPanel) {
-                    const isVisible = debugPanel.style.display !== 'none';
-                    debugPanel.style.display = isVisible ? 'none' : 'block';
-                }
-            }
-            lastTap = currentTime;
-        });
     },
 };
 
