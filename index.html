@@ -114,10 +114,19 @@
                     <div class="practice-section" id="completion-task">
                         <div class="practice-card">
                             <h4><i class="fas fa-puzzle-piece"></i> Hoàn thành từ</h4>
-                            <div class="word-completion-display">
-                                <p>Điền chữ cái còn thiếu để hoàn thành từ:</p>
-                                <h3 id="incomplete-word">h_ll_</h3>
-                            </div>
+                            
+                            <!-- Box hiển thị từ hiện tại -->
+                            <div class="current-word-display">
+                                <div class="word-counter">
+                                    <span id="completion-word-counter">Từ 1/50</span>
+                                </div>                                <div class="word-display-box">
+                                    <div class="word-label">Hoàn thành từ:</div>
+                                    <div class="current-word-text loading" id="completion-current-word">loading...</div>
+                                    <button class="word-speak-btn" id="completion-speak" title="Phát âm từ">
+                                        <i class="fas fa-volume-up"></i>
+                                    </button>
+                                </div>                            </div>
+                            
                             <div class="word-hint">
                                 <p>Gợi ý: <span id="word-hint-text">Xin chào</span></p>
                             </div>
@@ -153,8 +162,20 @@
                                     <span id="srs-sync-text">Kiểm tra trạng thái đồng bộ...</span>
                                 </div>
                             </div>
-                            
-                            <div class="srs-card">
+                              <div class="srs-card">
+                                <!-- Box hiển thị từ hiện tại -->
+                                <div class="current-word-display">
+                                    <div class="word-counter">
+                                        <span id="srs-word-counter">Từ 1/10</span>
+                                    </div>                                    <div class="word-display-box">
+                                        <div class="word-label">Từ cần ôn tập:</div>
+                                        <div class="current-word-text loading" id="srs-current-word">loading...</div>
+                                        <button class="word-speak-btn" id="srs-speak" title="Phát âm từ">
+                                            <i class="fas fa-volume-up"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                
                                 <div class="word-info" id="srs-word-info">Từ mới</div>
                                 <div class="srs-word" id="srs-word">Loading...</div>
                                 

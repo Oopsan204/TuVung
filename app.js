@@ -4,9 +4,6 @@
 // Note: Global variables are declared in js/config.js
 // They will be updated by VocabularyManager
 
-// Completion task object
-let completionTask;
-
 // SRS Session variables
 let currentSRSWords = [];
 let currentSRSIndex = 0;
@@ -78,17 +75,15 @@ function setupGlobalEventListeners() {
     window.addEventListener('offline', () => {
         isOnline = false;
         UIManager.showToast('Mất kết nối mạng!', 'warning');
-    });
-
-    // Phím tắt toàn cục
+    });    // Phím tắt toàn cục
     document.addEventListener('keydown', handleGlobalKeydown);
     
     // Completion task event listeners
     const checkCompletionBtn = document.getElementById('check-completion');
     if (checkCompletionBtn) {
         checkCompletionBtn.addEventListener('click', () => {
-            if (completionTask) {
-                completionTask.checkAnswer();
+            if (LearningManager.completionTask) {
+                LearningManager.completionTask.checkAnswer();
             }
         });
     }
@@ -96,8 +91,8 @@ function setupGlobalEventListeners() {
     const completionNextBtn = document.getElementById('completion-next');
     if (completionNextBtn) {
         completionNextBtn.addEventListener('click', () => {
-            if (completionTask) {
-                completionTask.showNextWord();
+            if (LearningManager.completionTask) {
+                LearningManager.completionTask.showNextWord();
             }
         });
     }
@@ -105,8 +100,17 @@ function setupGlobalEventListeners() {
     const completionInput = document.getElementById('completion-input');
     if (completionInput) {
         completionInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter' && completionTask) {
-                completionTask.checkAnswer();
+            if (e.key === 'Enter' && LearningManager.completionTask) {
+                LearningManager.completionTask.checkAnswer();
+            }
+        });
+    }
+    
+    const completionSpeakBtn = document.getElementById('completion-speak');
+    if (completionSpeakBtn) {
+        completionSpeakBtn.addEventListener('click', () => {
+            if (LearningManager.completionTask) {
+                LearningManager.completionTask.speakCurrentWord();
             }
         });
     }
@@ -115,6 +119,11 @@ function setupGlobalEventListeners() {
     const startSRSBtn = document.getElementById('start-srs');
     if (startSRSBtn) {
         startSRSBtn.addEventListener('click', startSRSSession);
+    }
+    
+    const srsSpeakBtn = document.getElementById('srs-speak');
+    if (srsSpeakBtn) {
+        srsSpeakBtn.addEventListener('click', speakSRSCurrentWord);
     }
 }
 
@@ -225,22 +234,41 @@ function switchLearnTask(taskId) {
     // Remove active class from all task buttons
     document.querySelectorAll('.task-btn').forEach(btn => btn.classList.remove('active'));
     
-    // Add active class to current task button
-    const activeButton = document.querySelector(`[onclick*="${taskId}"], .task-btn[data-task="${taskId}"]`);
-    if (activeButton) {
-        activeButton.classList.add('active');
+    // Add active class to current task button based on taskId
+    let activeButtonId;
+    switch(taskId) {
+        case 'dictation-task':
+            activeButtonId = 'task-dictation';
+            break;
+        case 'translation-task':
+            activeButtonId = 'task-translation';
+            break;
+        case 'completion-task':
+            activeButtonId = 'task-completion';
+            break;
+        case 'srs-task':
+            activeButtonId = 'task-srs';
+            break;
+    }
+    
+    if (activeButtonId) {
+        const activeButton = document.getElementById(activeButtonId);
+        if (activeButton) {
+            activeButton.classList.add('active');
+        }
     }
     
     // Hide all practice sections
     document.querySelectorAll('.practice-section').forEach(section => {
         section.classList.remove('active-task');
     });
-    
-    // Show current task section
+      // Show current task section
     const taskSection = document.getElementById(taskId);
     if (taskSection) {
         taskSection.classList.add('active-task');
-    }    // Initialize task-specific functionality
+    }
+    
+    // Initialize task-specific functionality
     switch(taskId) {
         case 'dictation-task':
             LearningManager.dictationTask.init(wordList);
@@ -249,10 +277,7 @@ function switchLearnTask(taskId) {
             LearningManager.translationTask.init(wordList);
             break;
         case 'completion-task':
-            if (!completionTask) {
-                completionTask = LearningManager.completionTask;
-            }
-            completionTask.init(wordList);
+            LearningManager.completionTask.init(wordList);
             break;
         case 'srs-task':
             initSRSSession();
@@ -1136,6 +1161,9 @@ function showSRSWord() {
     if (srsWordElement) srsWordElement.textContent = word;
     if (srsMeaningElement) srsMeaningElement.textContent = vocabulary[word] || '';
     
+    // Update current word display box
+    updateSRSCurrentWordDisplay(word);
+    
     // Hiển thị thông tin từ
     let wordInfo = '';
     if (currentWordData.isNew) {
@@ -1168,6 +1196,43 @@ function showSRSWord() {
     
     srsSession.showingAnswer = false;
     updateSRSProgress();
+}
+
+// Update SRS current word display
+function updateSRSCurrentWordDisplay(word) {
+    // Update current word display box
+    const currentWordElement = document.getElementById('srs-current-word');
+    if (currentWordElement && word) {
+        currentWordElement.textContent = word;
+        currentWordElement.classList.remove('loading');
+    }
+    
+    // Update word counter
+    const wordCounterElement = document.getElementById('srs-word-counter');
+    if (wordCounterElement && srsSession) {
+        const currentIndex = currentSRSIndex + 1;
+        const totalWords = srsSession.totalWords;
+        wordCounterElement.textContent = `Từ ${currentIndex}/${totalWords}`;
+    }
+}
+
+// Speak SRS current word function
+function speakSRSCurrentWord() {
+    if (srsSession && srsSession.words && srsSession.words.length > 0) {
+        const currentWord = srsSession.words[currentSRSIndex];
+        if (currentWord && window.AudioManager) {
+            window.AudioManager.speak(currentWord);
+            
+            // Add visual feedback
+            const speakBtn = document.getElementById('srs-speak');
+            if (speakBtn) {
+                speakBtn.classList.add('speaking');
+                setTimeout(() => {
+                    speakBtn.classList.remove('speaking');
+                }, 1000);
+            }
+        }
+    }
 }
 
 // Cập nhật thanh tiến trình SRS

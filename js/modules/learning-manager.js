@@ -293,57 +293,135 @@ const LearningManager = {
                 LearningManager.initializeWordList(wordList);
                 this.showNextWord();
             }
-        },
-
-        showNextWord() {
+        },        showNextWord() {
             this.currentWord = LearningManager.getCurrentWord();
             this.generateIncompleteWord();
-            this.showIncompleteWord();
             this.showHint();
+            this.updateCurrentWordDisplay(); // Gọi sau khi generateIncompleteWord
             this.clearInput();
             this.clearResult();
             LearningManager.updateProgress();
-        },
-
-        generateIncompleteWord() {
+        },updateCurrentWordDisplay() {
+            // Update current word display box với từ đã thiếu chữ cái
+            const currentWordElement = document.getElementById('completion-current-word');
+            if (currentWordElement && this.incompleteWord) {
+                currentWordElement.textContent = this.incompleteWord;
+                currentWordElement.classList.remove('loading');
+            }
+            
+            // Update word counter
+            const wordCounterElement = document.getElementById('completion-word-counter');
+            if (wordCounterElement) {
+                const currentIndex = LearningManager.currentIndex + 1;
+                const totalWords = LearningManager.currentWordList.length;
+                wordCounterElement.textContent = `Từ ${currentIndex}/${totalWords}`;
+            }
+        },        generateIncompleteWord() {
             if (!this.currentWord || this.currentWord.length < 3) {
                 this.incompleteWord = this.currentWord;
                 return;
             }
 
             let word = this.currentWord.toLowerCase();
-            let incomplete = '';
             
-            // Giữ lại chữ cái đầu và cuối, ẩn một số chữ cái ở giữa
-            for (let i = 0; i < word.length; i++) {
-                if (i === 0 || i === word.length - 1) {
-                    // Giữ chữ cái đầu và cuối
-                    incomplete += word[i];
-                } else if (word.length > 5 && Math.random() < 0.4) {
-                    // Với từ dài, ẩn khoảng 40% chữ cái ở giữa
-                    incomplete += '_';
-                } else if (word.length <= 5 && Math.random() < 0.3) {
-                    // Với từ ngắn, ẩn khoảng 30% chữ cái ở giữa
-                    incomplete += '_';
-                } else {
-                    incomplete += word[i];
+            // Xử lý từ có dấu cách hoặc dấu gạch ngang - tách thành các từ riêng biệt
+            if (word.includes(' ') || word.includes('-')) {
+                // Tách từ bằng cả dấu cách và dấu gạch ngang, nhưng giữ lại dấu phân tách
+                let parts = [];
+                let separators = [];
+                let currentPart = '';
+                
+                for (let i = 0; i < word.length; i++) {
+                    let char = word[i];
+                    if (char === ' ' || char === '-') {
+                        if (currentPart) {
+                            parts.push(currentPart);
+                            separators.push(char);
+                            currentPart = '';
+                        }
+                    } else {
+                        currentPart += char;
+                    }
                 }
+                
+                // Thêm phần cuối cùng
+                if (currentPart) {
+                    parts.push(currentPart);
+                }
+                
+                // Xử lý từng phần
+                let incompleteParts = [];
+                for (let part of parts) {
+                    if (part.length < 3) {
+                        // Từ ngắn giữ nguyên
+                        incompleteParts.push(part);
+                    } else {
+                        // Áp dụng thuật toán ẩn chữ cái cho từng phần
+                        let incomplete = '';
+                        for (let i = 0; i < part.length; i++) {
+                            if (i === 0 || i === part.length - 1) {
+                                // Giữ chữ cái đầu và cuối
+                                incomplete += part[i];
+                            } else if (part.length > 5 && Math.random() < 0.4) {
+                                // Với từ dài, ẩn khoảng 40% chữ cái ở giữa
+                                incomplete += '_';
+                            } else if (part.length <= 5 && Math.random() < 0.3) {
+                                // Với từ ngắn, ẩn khoảng 30% chữ cái ở giữa
+                                incomplete += '_';
+                            } else {
+                                incomplete += part[i];
+                            }
+                        }
+                        
+                        // Đảm bảo có ít nhất 1 chữ cái bị ẩn trong mỗi phần
+                        if (incomplete === part && part.length >= 3) {
+                            const middleIndex = Math.floor(part.length / 2);
+                            incomplete = incomplete.substring(0, middleIndex) + '_' + incomplete.substring(middleIndex + 1);
+                        }
+                        
+                        incompleteParts.push(incomplete);
+                    }
+                }
+                
+                // Ghép lại với các dấu phân tách ban đầu
+                let result = '';
+                for (let i = 0; i < incompleteParts.length; i++) {
+                    result += incompleteParts[i];
+                    if (i < separators.length) {
+                        result += separators[i];
+                    }
+                }
+                
+                this.incompleteWord = result;
+            } else {
+                // Xử lý từ đơn (không có dấu cách hoặc dấu gạch ngang)
+                let incomplete = '';
+                
+                for (let i = 0; i < word.length; i++) {
+                    if (i === 0 || i === word.length - 1) {
+                        // Giữ chữ cái đầu và cuối
+                        incomplete += word[i];
+                    } else if (word.length > 5 && Math.random() < 0.4) {
+                        // Với từ dài, ẩn khoảng 40% chữ cái ở giữa
+                        incomplete += '_';
+                    } else if (word.length <= 5 && Math.random() < 0.3) {
+                        // Với từ ngắn, ẩn khoảng 30% chữ cái ở giữa
+                        incomplete += '_';
+                    } else {
+                        incomplete += word[i];
+                    }
+                }
+                
+                // Đảm bảo có ít nhất 1 chữ cái bị ẩn
+                if (incomplete === word) {
+                    const middleIndex = Math.floor(word.length / 2);
+                    incomplete = incomplete.substring(0, middleIndex) + '_' + incomplete.substring(middleIndex + 1);
+                }
+                
+                this.incompleteWord = incomplete;
             }
             
-            // Đảm bảo có ít nhất 1 chữ cái bị ẩn
-            if (incomplete === word) {
-                const middleIndex = Math.floor(word.length / 2);
-                incomplete = incomplete.substring(0, middleIndex) + '_' + incomplete.substring(middleIndex + 1);
-            }
-            
-            this.incompleteWord = incomplete;
-        },
-
-        showIncompleteWord() {
-            const incompleteElement = document.getElementById('incomplete-word');
-            if (incompleteElement) {
-                incompleteElement.textContent = this.incompleteWord;
-            }
+            console.log(`Generated incomplete word: "${this.currentWord}" -> "${this.incompleteWord}"`);
         },
 
         showHint() {
@@ -396,14 +474,27 @@ const LearningManager = {
                 if (window.AudioManager) {
                     window.AudioManager.playIncorrectSound();
                 }
-            }
-
-            LearningManager.updateProgress();
+            }            LearningManager.updateProgress();
         },
 
         nextWord() {
             LearningManager.nextWord();
             this.showNextWord();
+        },
+
+        speakCurrentWord() {
+            if (this.currentWord && window.AudioManager) {
+                window.AudioManager.speak(this.currentWord);
+                
+                // Add visual feedback
+                const speakBtn = document.getElementById('completion-speak');
+                if (speakBtn) {
+                    speakBtn.classList.add('speaking');
+                    setTimeout(() => {
+                        speakBtn.classList.remove('speaking');
+                    }, 1000);
+                }
+            }
         }
     },
 
@@ -484,14 +575,18 @@ const LearningManager = {
             completionNextBtn.addEventListener('click', () => {
                 this.completionTask.nextWord();
             });
-        }
-
-        const completionInput = document.getElementById('completion-input');
+        }        const completionInput = document.getElementById('completion-input');
         if (completionInput) {
             completionInput.addEventListener('keypress', (e) => {
                 if (e.key === 'Enter') {
                     this.completionTask.checkAnswer();
                 }
+            });
+        }        // Completion task speak button
+        const completionSpeakBtn = document.getElementById('completion-speak');
+        if (completionSpeakBtn) {
+            completionSpeakBtn.addEventListener('click', () => {
+                this.completionTask.speakCurrentWord();
             });
         }
     }
