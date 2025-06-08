@@ -16,18 +16,19 @@ const CloudManager = {
         
         // Tự động tải xuống dữ liệu mới nhất từ cloud nếu đã đăng nhập
         await this.autoDownloadOnInit();
-    },
-
-    // Tải cài đặt từ localStorage
+    },    // Tải cài đặt từ localStorage
     loadSettings() {
-        this.token = localStorage.getItem('githubToken') || '';
+        // Support both key formats for backward compatibility
+        this.token = localStorage.getItem('githubToken') || localStorage.getItem('github_token') || '';
         this.gistId = localStorage.getItem('gistId') || '';
         this.autoSync = localStorage.getItem('autoSync') === 'true';
     },
 
     // Lưu cài đặt
     saveSettings() {
+        // Use both key formats to ensure compatibility
         localStorage.setItem('githubToken', this.token);
+        localStorage.setItem('github_token', this.token);
         localStorage.setItem('gistId', this.gistId);
         localStorage.setItem('autoSync', this.autoSync.toString());
     },
@@ -88,26 +89,38 @@ const CloudManager = {
         if (backupFileInput) {
             backupFileInput.addEventListener('change', (e) => this.handleRestoreFile(e));
         }
-    },
-
-    // Hiển thị dialog đăng nhập
+    },    // Hiển thị dialog đăng nhập
     showLoginDialog() {
-        const dialog = document.getElementById('github-token-dialog');
-        if (dialog) {
-            dialog.style.display = 'block';
+        // Use the global function to show the dialog with proper animations
+        if (typeof showGitHubTokenDialog === 'function') {
+            showGitHubTokenDialog();
+        } else {
+            // Fallback to simple display
+            const dialog = document.getElementById('github-token-dialog');
+            if (dialog) {
+                dialog.style.display = 'flex';
+            }
         }
-    },
-
-    // Ẩn dialog đăng nhập
+    },    // Ẩn dialog đăng nhập
     hideLoginDialog() {
-        const dialog = document.getElementById('github-token-dialog');
-        if (dialog) {
-            dialog.style.display = 'none';
+        // Use the global function to close the dialog with proper animations
+        if (typeof closeGitHubTokenDialog === 'function') {
+            closeGitHubTokenDialog();
+        } else {
+            // Fallback to simple hide
+            const dialog = document.getElementById('github-token-dialog');
+            if (dialog) {
+                dialog.style.display = 'none';
+            }
         }
     },    // Lưu token
     async saveToken() {
-        const tokenInput = document.getElementById('github-token');
-        if (!tokenInput) return;
+        // Use the correct token input ID from the new dialog
+        const tokenInput = document.getElementById('github-token-input');
+        if (!tokenInput) {
+            console.error('GitHub token input not found');
+            return;
+        }
 
         const token = tokenInput.value.trim();
         if (!token) {
@@ -136,13 +149,13 @@ const CloudManager = {
         if (window.UIManager) {
             window.UIManager.showToast(`${validation.message}`, 'success');
         }
-    },
-
-    // Đăng xuất
+    },    // Đăng xuất
     logout() {
         this.token = '';
         this.gistId = '';
+        // Clear both key formats
         localStorage.removeItem('githubToken');
+        localStorage.removeItem('github_token');
         localStorage.removeItem('gistId');
         this.updateAuthStatus();
         

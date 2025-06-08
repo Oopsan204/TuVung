@@ -396,11 +396,10 @@ const UIManager = {
             vietnameseInput.value = '';
             if (topicSelect) topicSelect.value = '';
         }
-    },
-
-    // Cập nhật trạng thái xác thực GitHub
+    },    // Cập nhật trạng thái xác thực GitHub
     updateGitHubAuthStatus() {
-        const token = localStorage.getItem('githubToken');
+        // Check both key formats for backward compatibility
+        const token = localStorage.getItem('githubToken') || localStorage.getItem('github_token');
         const statusElement = document.getElementById('github-auth-status');
         const loginBtn = document.getElementById('github-login');
         const logoutBtn = document.getElementById('github-logout');

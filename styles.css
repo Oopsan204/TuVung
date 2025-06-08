@@ -2045,56 +2045,192 @@ textarea {
     }
 }
 
-/* ================== SRS COMPLETION MODAL ================== */
-/* SRS Completion Modal Styles */
-.srs-completion-container {
+/* ================== GITHUB TOKEN DIALOG STYLES ================== */
+/* GitHub Token Dialog Improvements */
+.github-token-dialog {
+    display: none;
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
     background: rgba(0, 0, 0, 0.6);
-    z-index: 1000;
-    display: none;
-    align-items: center;
+    backdrop-filter: blur(5px);
+    z-index: 10000;
     justify-content: center;
-    padding: 20px;
-    box-sizing: border-box;
-    backdrop-filter: blur(3px);
-    animation: modalFadeIn 0.3s ease-out;
+    align-items: center;
+    animation: fadeIn 0.3s ease;
 }
 
-.srs-completion-container.show {
-    display: flex;
+.github-token-dialog.show {
+    display: flex !important;
 }
 
-@keyframes modalFadeIn {
-    from {
-        opacity: 0;
-        backdrop-filter: blur(0px);
-    }
-    to {
-        opacity: 1;
-        backdrop-filter: blur(3px);
-    }
-}
-
-.srs-completion-card {
-    background: white;
-    border-radius: 20px;
-    padding: 40px;
+.github-token-dialog .dialog-content {
+    background: #fff;
+    border-radius: 12px;
+    padding: 30px;
     max-width: 500px;
-    width: 100%;
-    text-align: center;
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
-    animation: modalSlideIn 0.4s ease-out;
+    width: 90%;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    animation: slideInUp 0.4s ease;
     position: relative;
 }
 
-@keyframes modalSlideIn {
+.github-token-dialog .dialog-header {
+    margin-bottom: 25px;
+    text-align: center;
+}
+
+.github-token-dialog .dialog-header h3 {
+    color: #333;
+    margin: 0 0 10px 0;
+    font-size: 1.5em;
+    font-weight: 600;
+}
+
+.github-token-dialog .dialog-header p {
+    color: #666;
+    margin: 0;
+    line-height: 1.5;
+}
+
+.github-token-dialog .input-group {
+    margin-bottom: 20px;
+}
+
+.github-token-dialog .input-group label {
+    display: block;
+    margin-bottom: 8px;
+    color: #333;
+    font-weight: 500;
+}
+
+.github-token-dialog .input-group input {
+    width: 100%;
+    padding: 12px 16px;
+    border: 2px solid #e1e5e9;
+    border-radius: 8px;
+    font-size: 14px;
+    transition: all 0.3s ease;
+    box-sizing: border-box;
+}
+
+.github-token-dialog .input-group input:focus {
+    outline: none;
+    border-color: #4CAF50;
+    box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.1);
+}
+
+.github-token-dialog .token-help {
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 20px;
+    font-size: 13px;
+    color: #6c757d;
+}
+
+.github-token-dialog .token-help strong {
+    color: #495057;
+}
+
+.github-token-dialog .token-help ol {
+    margin: 10px 0 0 0;
+    padding-left: 20px;
+}
+
+.github-token-dialog .token-help li {
+    margin-bottom: 5px;
+}
+
+.github-token-dialog .token-help a {
+    color: #007bff;
+    text-decoration: none;
+}
+
+.github-token-dialog .token-help a:hover {
+    text-decoration: underline;
+}
+
+.github-token-dialog .dialog-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    margin-top: 25px;
+}
+
+.github-token-dialog .btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    min-width: 80px;
+}
+
+.github-token-dialog .btn-primary {
+    background: #4CAF50;
+    color: white;
+}
+
+.github-token-dialog .btn-primary:hover:not(:disabled) {
+    background: #45a049;
+    transform: translateY(-1px);
+}
+
+.github-token-dialog .btn-primary:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+}
+
+.github-token-dialog .btn-secondary {
+    background: #6c757d;
+    color: white;
+}
+
+.github-token-dialog .btn-secondary:hover {
+    background: #5a6268;
+    transform: translateY(-1px);
+}
+
+.github-token-dialog .close-btn {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: #999;
+    padding: 5px;
+    line-height: 1;
+    border-radius: 50%;
+    width: 35px;
+    height: 35px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.github-token-dialog .close-btn:hover {
+    background: #f1f1f1;
+    color: #666;
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideInUp {
     from {
         opacity: 0;
-        transform: translateY(-30px) scale(0.9);
+        transform: translateY(30px) scale(0.95);
     }
     to {
         opacity: 1;
@@ -2102,166 +2238,27 @@ textarea {
     }
 }
 
-.completion-icon {
-    font-size: 4em;
-    margin-bottom: 20px;
-    display: block;
-    filter: drop-shadow(2px 2px 8px rgba(0, 0, 0, 0.1));
-}
-
-.completion-icon.excellent {
-    animation: bounce 1s ease-in-out;
-}
-
-.completion-icon.good {
-    animation: pulse 1s ease-in-out;
-}
-
-.completion-icon.average {
-    animation: shake 0.8s ease-in-out;
-}
-
-@keyframes bounce {
-    0%, 20%, 50%, 80%, 100% {
-        transform: translateY(0);
-    }
-    40% {
-        transform: translateY(-20px);
-    }
-    60% {
-        transform: translateY(-10px);
-    }
-}
-
-@keyframes pulse {
-    0%, 100% {
-        transform: scale(1);
-    }
-    50% {
-        transform: scale(1.1);
-    }
-}
-
-@keyframes shake {
-    0%, 100% { transform: translateX(0); }
-    25% { transform: translateX(-5px); }
-    75% { transform: translateX(5px); }
-}
-
-.completion-title {
-    font-size: 2.5em;
-    color: var(--primary-color);
-    margin-bottom: 10px;
-    font-weight: bold;
-    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.completion-subtitle {
-    font-size: 1.2em;
-    color: var(--light-text);
-    margin-bottom: 30px;
-}
-
-.completion-stats {
-    display: flex;
-    justify-content: space-around;
-    margin: 30px 0;
-    padding: 20px;
-    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
-    border-radius: 15px;
-    gap: 20px;
-}
-
-.completion-stat {
-    text-align: center;
-    flex: 1;
-}
-
-.completion-stat-value {
-    font-size: 2.2em;
-    font-weight: bold;
-    color: var(--primary-color);
-    margin-bottom: 5px;
-    display: block;
-}
-
-.completion-stat-label {
-    font-size: 0.9em;
-    color: var(--light-text);
-    font-weight: 500;
-}
-
-.completion-actions {
-    display: flex;
-    gap: 15px;
-    justify-content: center;
-    margin-top: 30px;
-    flex-wrap: wrap;
-}
-
-.completion-actions .btn {
-    flex: 1;
-    min-width: 120px;
-    padding: 12px 20px;
-    font-size: 1em;
-    border-radius: 12px;
-    transition: all 0.3s ease;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-}
-
-.completion-actions .btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
-}
-
-.completion-actions .btn i {
-    font-size: 1.1em;
-}
-
-/* Responsive design for completion modal */
+/* Mobile responsive */
 @media (max-width: 768px) {
-    .srs-completion-card {
-        padding: 30px 20px;
+    .github-token-dialog .dialog-content {
         margin: 20px;
+        padding: 25px 20px;
+        max-width: none;
+        width: calc(100% - 40px);
     }
     
-    .completion-title {
-        font-size: 2em;
+    .github-token-dialog .dialog-header h3 {
+        font-size: 1.3em;
     }
     
-    .completion-stats {
+    .github-token-dialog .dialog-actions {
         flex-direction: column;
-        gap: 15px;
+        gap: 10px;
     }
     
-    .completion-stat-value {
-        font-size: 1.8em;
-    }
-    
-    .completion-actions {
-        flex-direction: column;
-    }
-    
-    .completion-actions .btn {
+    .github-token-dialog .btn {
         width: 100%;
-        min-width: auto;
-    }
-}
-
-@media (max-width: 480px) {
-    .completion-icon {
-        font-size: 3em;
-    }
-    
-    .completion-title {
-        font-size: 1.8em;
-    }
-    
-    .completion-subtitle {
-        font-size: 1em;
+        padding: 12px;
     }
 }
 

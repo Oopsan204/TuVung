@@ -652,35 +652,49 @@
                 </button>
             </div>
         </div>
-    </div>
-
-    <!-- GitHub Token Dialog -->
-    <div id="github-token-dialog" class="modal" style="display: none;">
-        <div class="modal-content">
-            <h3>Nhập GitHub Personal Access Token</h3>
-            <p>Để sử dụng tính năng đồng bộ với GitHub Gist, bạn cần tạo và nhập Personal Access Token.</p>
-            
-            <div class="form-group">
-                <label for="github-token">GitHub Token:</label>
-                <input type="password" id="github-token" placeholder="Nhập GitHub Personal Access Token...">
+    </div>    <!-- GitHub Token Dialog -->
+    <div id="github-token-dialog" class="github-token-dialog" style="display: none;">
+        <div class="dialog-content">
+            <button class="close-btn" onclick="closeGitHubTokenDialog()">&times;</button>
+            <div class="dialog-header">
+                <h3>🔐 Kết nối GitHub</h3>
+                <p>Nhập GitHub Personal Access Token để đồng bộ dữ liệu</p>
             </div>
-              <div class="instructions">
-                <h4>Hướng dẫn tạo GitHub Token:</h4>
+            
+            <div class="token-help">
+                <strong>Cách tạo GitHub Token:</strong>
                 <ol>
-                    <li>Truy cập <a href="https://github.com/settings/tokens?type=beta" target="_blank">GitHub Settings → Developer settings → Personal access tokens (fine-grained)</a></li>
-                    <li>Nhấp "Generate new token"</li>
-                    <li>Đặt tên cho token và chọn thời hạn</li>
-                    <li><strong>Quan trọng:</strong> Trong phần "Repository access", chọn "Public Repositories (read-only)" HOẶC "All repositories"</li>
-                    <li>Trong phần "Account permissions", chọn "Gists" với quyền "Write"</li>
-                    <li>Nhấp "Generate token" và copy token</li>
-                    <li>Dán token vào ô trên</li>
+                    <li>Truy cập <a href="https://github.com/settings/tokens" target="_blank">GitHub Settings → Tokens</a></li>
+                    <li>Click "Generate new token (classic)"</li>
+                    <li>Đặt tên cho token (ví dụ: "TuVung App")</li>
+                    <li>Chọn quyền <strong>"gist"</strong> để tạo và chỉnh sửa Gist</li>
+                    <li>Click "Generate token" và copy token</li>
                 </ol>
-                <p><strong>Lưu ý:</strong> Token chỉ hiển thị 1 lần, hãy lưu lại để sử dụng sau.</p>
             </div>
             
-            <div class="modal-actions">
-                <button id="save-token" class="btn primary">Lưu Token</button>
-                <button id="close-token-dialog" class="btn secondary">Hủy</button>
+            <div class="input-group">
+                <label for="github-token-input">
+                    <span>GitHub Personal Access Token:</span>
+                </label>
+                <input 
+                    type="password" 
+                    id="github-token-input" 
+                    placeholder="ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                    autocomplete="off"
+                    spellcheck="false"
+                >
+                <div class="input-hint" style="font-size: 12px; color: #666; margin-top: 5px;">
+                    Token sẽ được lưu an toàn trong trình duyệt của bạn
+                </div>
+            </div>
+            
+            <div class="dialog-actions">
+                <button class="btn btn-secondary" onclick="closeGitHubTokenDialog()">
+                    Hủy bỏ
+                </button>
+                <button class="btn btn-primary" onclick="saveGitHubToken()" id="save-token-btn">
+                    Lưu Token
+                </button>
             </div>
         </div>
     </div>

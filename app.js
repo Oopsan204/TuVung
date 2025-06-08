@@ -1651,6 +1651,193 @@ function showSRSDashboardLoadingState() {
     }, 1000);
 }
 
+// ============= GITHUB TOKEN DIALOG FUNCTIONS =============
+
+// GitHub Token Dialog Functions
+function showGitHubTokenDialog() {
+    const dialog = document.getElementById('github-token-dialog');
+    const input = document.getElementById('github-token-input');
+    
+    if (!dialog || !input) {
+        console.error('GitHub token dialog elements not found');
+        return;
+    }
+    
+    // Clear previous input
+    input.value = '';
+    
+    // Show dialog with animation
+    dialog.style.display = 'flex';
+    setTimeout(() => {
+        dialog.classList.add('show');
+    }, 10);
+    
+    // Focus on input
+    setTimeout(() => {
+        input.focus();
+    }, 300);
+    
+    // Add escape key listener
+    const escapeHandler = (e) => {
+        if (e.key === 'Escape') {
+            closeGitHubTokenDialog();
+            document.removeEventListener('keydown', escapeHandler);
+        }
+    };
+    document.addEventListener('keydown', escapeHandler);
+    
+    // Add enter key listener for input
+    const enterHandler = (e) => {
+        if (e.key === 'Enter' && input.value.trim()) {
+            saveGitHubToken();
+        }
+    };
+    input.addEventListener('keydown', enterHandler);
+    
+    // Store handler for cleanup
+    dialog._enterHandler = enterHandler;
+}
+
+function closeGitHubTokenDialog() {
+    const dialog = document.getElementById('github-token-dialog');
+    const input = document.getElementById('github-token-input');
+    
+    if (!dialog) return;
+    
+    // Remove animation class
+    dialog.classList.remove('show');
+    
+    // Hide dialog after animation
+    setTimeout(() => {
+        dialog.style.display = 'none';
+    }, 300);
+    
+    // Clear input
+    if (input) {
+        input.value = '';
+        
+        // Remove enter key listener if exists
+        if (dialog._enterHandler) {
+            input.removeEventListener('keydown', dialog._enterHandler);
+            delete dialog._enterHandler;
+        }
+    }
+}
+
+async function saveGitHubToken() {
+    const input = document.getElementById('github-token-input');
+    const saveBtn = document.getElementById('save-token-btn');
+    
+    if (!input || !saveBtn) {
+        showToast('❌ Không tìm thấy input token', 'error');
+        return;
+    }
+    
+    const token = input.value.trim();
+    
+    // Validate token format
+    if (!token) {
+        showToast('❌ Vui lòng nhập GitHub token', 'error');
+        input.focus();
+        return;
+    }
+    
+    if (!token.startsWith('ghp_') && !token.startsWith('github_pat_')) {
+        const confirmed = confirm('Token có vẻ không đúng định dạng GitHub. Bạn có chắc muốn tiếp tục?');
+        if (!confirmed) {
+            input.focus();
+            return;
+        }
+    }
+    
+    // Show loading state
+    const originalText = saveBtn.textContent;
+    saveBtn.textContent = 'Đang kiểm tra...';
+    saveBtn.disabled = true;
+    
+    try {
+        // Test token by trying to list gists
+        const response = await fetch('https://api.github.com/gists', {
+            headers: {
+                'Authorization': `token ${token}`,
+                'Accept': 'application/vnd.github.v3+json'
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+          // Token is valid, save it with both key formats
+        localStorage.setItem('github_token', token);
+        localStorage.setItem('githubToken', token);
+        
+        // Update CloudManager
+        if (window.CloudManager) {
+            window.CloudManager.githubToken = token;
+            window.CloudManager.token = token;
+            window.CloudManager.saveSettings();
+            
+            // Enable auto-sync if possible
+            window.CloudManager.enableAutoSyncIfPossible();
+        }
+        
+        // Close dialog
+        closeGitHubTokenDialog();
+        
+        // Show success message
+        showToast('✅ GitHub token đã được lưu thành công!', 'success');
+        
+        // Update sync status
+        updateSyncStatus('🔗 Đã kết nối GitHub');
+        
+        // Update UI
+        if (window.UIManager) {
+            window.UIManager.updateGitHubAuthStatus();
+        }
+        
+    } catch (error) {
+        console.error('Error validating GitHub token:', error);
+        let errorMessage = '❌ Token không hợp lệ hoặc không có quyền gist';
+        
+        if (error.message.includes('401')) {
+            errorMessage = '❌ Token không hợp lệ hoặc đã hết hạn';
+        } else if (error.message.includes('403')) {
+            errorMessage = '❌ Token không có quyền truy cập gist';
+        } else if (error.message.includes('network')) {
+            errorMessage = '❌ Lỗi kết nối mạng';
+        }
+        
+        showToast(errorMessage, 'error');
+        input.focus();
+        
+    } finally {
+        // Restore button state
+        saveBtn.textContent = originalText;
+        saveBtn.disabled = false;
+    }
+}
+
+// Update sync status display
+function updateSyncStatus(status) {
+    const statusElement = document.querySelector('.sync-status');
+    if (statusElement) {
+        statusElement.textContent = status;
+    }
+}
+
+// Initialize GitHub token on page load
+function initializeGitHubToken() {
+    // Check both key formats for backward compatibility
+    const savedToken = localStorage.getItem('githubToken') || localStorage.getItem('github_token');
+    if (savedToken && window.CloudManager) {
+        window.CloudManager.githubToken = savedToken;
+        window.CloudManager.token = savedToken;
+        updateSyncStatus('🔗 Đã kết nối GitHub');
+    } else {
+        updateSyncStatus('🔌 Chưa kết nối GitHub');
+    }
+}
+
 // ============= EXISTING FUNCTIONS =============
 
 // Khởi động ứng dụng khi DOM đã sẵn sàng
