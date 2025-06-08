@@ -48,7 +48,7 @@ async function init() {
         initSynonymsTab();        initSRSTab();
         initDictionaryTab();
         initSettingsTab();
-        initGamesTab();
+        await initGamesTab();
         
         // Update dictionary count after all data is loaded
         updateDictionaryCount();
@@ -485,7 +485,7 @@ function initSettingsTab() {
     document.getElementById('reset-settings')?.addEventListener('click', resetSettings);
 }
 
-function initGamesTab() {
+async function initGamesTab() {
     console.log('Initializing Games tab...');
     
     // Initialize GameManager and render games interface
@@ -495,9 +495,8 @@ function initGamesTab() {
             if (!window.gameManager) {
                 window.gameManager = new GameManager();
             }
-            
-            // Initialize GameManager with required dependencies
-            window.gameManager.init(VocabularyManager, UIManager, AudioManager);
+              // Initialize GameManager with required dependencies
+            await window.gameManager.init(VocabularyManager, UIManager, AudioManager);
             
             // Show game selection screen
             window.gameManager.showGameSelection();

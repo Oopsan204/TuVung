@@ -359,6 +359,15 @@ const VocabularyManager = {
         }
         
         return { imported, skipped };
+    },
+
+    // Get all words in a format suitable for games
+    getAllWords() {
+        const words = [];
+        for (const [english, vietnamese] of Object.entries(this.data.vocabulary)) {
+            words.push({ english, vietnamese });
+        }
+        return words;
     }
 };
 

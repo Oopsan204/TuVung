@@ -255,17 +255,39 @@ class GameManager {
     getGameVocabulary(count = 10, difficulty = 'all') {
         if (!this.vocabularyManager || !this.vocabularyManager.getAllWords) {
             // Fallback to global vocabulary object
-            if (typeof vocabulary !== 'undefined' && vocabulary) {
-                const allWords = Object.values(vocabulary);
-                let filtered = allWords;
-                
-                if (difficulty !== 'all') {
-                    filtered = allWords.filter(word => word.difficulty === difficulty);
+            if (typeof window !== 'undefined' && window.vocabulary) {
+                const words = [];
+                for (const [english, vietnamese] of Object.entries(window.vocabulary)) {
+                    words.push({ english, vietnamese });
                 }
                 
-                return this.shuffleArray(filtered).slice(0, count);
+                if (words.length === 0) {
+                    console.warn('GameManager: No vocabulary available, using fallback words');
+                    return [
+                        { english: 'hello', vietnamese: 'xin chào' },
+                        { english: 'goodbye', vietnamese: 'tạm biệt' },
+                        { english: 'thank you', vietnamese: 'cảm ơn' },
+                        { english: 'yes', vietnamese: 'có' },
+                        { english: 'no', vietnamese: 'không' },
+                        { english: 'please', vietnamese: 'xin lỗi' },
+                        { english: 'water', vietnamese: 'nước' },
+                        { english: 'food', vietnamese: 'thức ăn' },
+                        { english: 'love', vietnamese: 'yêu' },
+                        { english: 'friend', vietnamese: 'bạn' }
+                    ].slice(0, count);
+                }
+                
+                return this.shuffleArray(words).slice(0, count);
             }
-            return [];
+            
+            console.warn('GameManager: No vocabulary source available, using fallback');
+            return [
+                { english: 'hello', vietnamese: 'xin chào' },
+                { english: 'goodbye', vietnamese: 'tạm biệt' },
+                { english: 'thank you', vietnamese: 'cảm ơn' },
+                { english: 'yes', vietnamese: 'có' },
+                { english: 'no', vietnamese: 'không' }
+            ].slice(0, count);
         }
         
         const allWords = this.vocabularyManager.getAllWords();
@@ -310,15 +332,13 @@ class BaseGame {
         this.setupGame(options);
         this.renderGame();
         this.startTimer();
-    }
-
-    end() {
+    }    end() {
         this.isActive = false;
         if (this.timer) {
             clearInterval(this.timer);
             this.timer = null;
         }
-        this.gameManager.updateScore(this.constructor.name, this.score);
+        this.gameManager.updateScore(this.gameType, this.score);
     }
 
     setupGame(options) {
@@ -350,9 +370,7 @@ class BaseGame {
     }    endGame() {
         this.isActive = false;
         this.showResults();
-    }
-
-    showResults() {
+    }    showResults() {
         const container = document.getElementById('games-container');
         if (!container) return;
 
@@ -361,7 +379,7 @@ class BaseGame {
                 <h2>🎉 Kết Quả</h2>
                 <div class="final-score">Điểm số: ${this.score}</div>
                 <div class="game-actions">
-                    <button class="btn btn-primary" data-game-type="${this.gameManager.currentGame.constructor.name}">
+                    <button class="btn btn-primary" data-game-type="${this.gameManager.currentGame.gameType}">
                         Chơi Lại
                     </button>
                     <button class="btn btn-secondary game-back-btn">
@@ -395,11 +413,19 @@ class WordMatchGame extends BaseGame {
         this.pairs = [];
         this.selectedCards = [];
         this.matchedPairs = 0;
-    }
-
-    setupGame(options) {
+    }    setupGame(options) {
         this.timeLeft = options.timeLimit || 120;
         this.vocabulary = this.gameManager.getGameVocabulary(8);
+        
+        // Ensure we have enough vocabulary
+        if (this.vocabulary.length < 4) {
+            console.warn('WordMatchGame: Not enough vocabulary words available');
+            // Duplicate words if necessary
+            while (this.vocabulary.length < 4) {
+                this.vocabulary.push(...this.vocabulary.slice(0, 4 - this.vocabulary.length));
+            }
+        }
+        
         this.pairs = this.createPairs();
         this.selectedCards = [];
         this.matchedPairs = 0;
@@ -481,13 +507,12 @@ class WordMatchGame extends BaseGame {
 
         if (match1 === match2 && type1 !== type2) {
             // Correct match
-            card1.classList.add('matched');
-            card2.classList.add('matched');
+            card1.classList.add('matched');            card2.classList.add('matched');
             this.addScore(20);
             this.matchedPairs++;
 
             if (this.gameManager.audioManager) {
-                this.gameManager.audioManager.playSound('correct');
+                this.gameManager.audioManager.playCorrectSound();
             }
 
             if (this.matchedPairs === this.vocabulary.length) {
@@ -498,14 +523,13 @@ class WordMatchGame extends BaseGame {
             // Wrong match
             card1.classList.add('wrong');
             card2.classList.add('wrong');
-            
-            setTimeout(() => {
+              setTimeout(() => {
                 card1.classList.remove('wrong');
                 card2.classList.remove('wrong');
             }, 1000);
 
             if (this.gameManager.audioManager) {
-                this.gameManager.audioManager.playSound('incorrect');
+                this.gameManager.audioManager.playIncorrectSound();
             }
         }
 
@@ -582,9 +606,7 @@ class TypingRaceGame extends BaseGame {
                 feedback.textContent = '✗ Sai rồi, thử lại!';
                 feedback.className = 'typing-feedback incorrect';
             }
-        });
-
-        input.addEventListener('keydown', (e) => {
+        });        input.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' && e.target.value.trim()) {
                 this.handleIncorrectWord();
             }
@@ -592,28 +614,25 @@ class TypingRaceGame extends BaseGame {
     }
 
     getCurrentWord() {
-        return this.vocabulary[this.currentWordIndex];
+        return this.vocabulary[this.currentWordIndex] || { english: 'hello', vietnamese: 'xin chào', pronunciation: '' };
     }
 
-    handleCorrectWord() {
-        const timeBonus = Math.max(0, Math.floor(this.timeLeft / 10));
+    handleCorrectWord() {        const timeBonus = Math.max(0, Math.floor(this.timeLeft / 10));
         this.addScore(10 + timeBonus);
         this.wordsCompleted++;
         
         if (this.gameManager.audioManager) {
-            this.gameManager.audioManager.playSound('correct');
+            this.gameManager.audioManager.playCorrectSound();
         }
 
         this.nextWord();
-    }
-
-    handleIncorrectWord() {
+    }    handleIncorrectWord() {
         const feedback = document.querySelector('.typing-feedback');
         feedback.textContent = `✗ Sai! Đáp án: ${this.getCurrentWord().english}`;
         feedback.className = 'typing-feedback incorrect';
         
         if (this.gameManager.audioManager) {
-            this.gameManager.audioManager.playSound('incorrect');
+            this.gameManager.audioManager.playIncorrectSound();
         }
 
         setTimeout(() => this.nextWord(), 2000);
@@ -660,15 +679,23 @@ class MemoryGame extends BaseGame {
         this.cards = [];
         this.flippedCards = [];
         this.matchedPairs = 0;
-    }
-
-    setupGame(options) {
+    }    setupGame(options) {
         this.timeLeft = options.timeLimit || 180;
         this.vocabulary = this.gameManager.getGameVocabulary(8);
+        
+        // Ensure we have enough vocabulary
+        if (this.vocabulary.length < 4) {
+            console.warn('MemoryGame: Not enough vocabulary words available');
+            // Duplicate words if necessary
+            while (this.vocabulary.length < 4) {
+                this.vocabulary.push(...this.vocabulary.slice(0, 4 - this.vocabulary.length));
+            }
+        }
+        
         this.cards = this.createMemoryCards();
         this.flippedCards = [];
         this.matchedPairs = 0;
-    }    createMemoryCards() {
+    }createMemoryCards() {
         const cards = [];
         this.vocabulary.forEach((word, index) => {
             // English card
@@ -725,9 +752,7 @@ class MemoryGame extends BaseGame {
                 this.handleCardFlip(e.currentTarget);
             });
         });
-    }
-
-    handleCardFlip(cardElement) {
+    }    handleCardFlip(cardElement) {
         if (cardElement.classList.contains('flipped') || 
             cardElement.classList.contains('matched') ||
             this.flippedCards.length >= 2) {
@@ -738,7 +763,7 @@ class MemoryGame extends BaseGame {
         this.flippedCards.push(cardElement);
 
         if (this.flippedCards.length === 2) {
-            setTimeout(() => this.checkMemoryMatch(), 1000);
+            setTimeout(() => this.checkMemoryMatch(), 800);
         }
     }
 
@@ -754,25 +779,22 @@ class MemoryGame extends BaseGame {
             card1.classList.add('matched');
             card2.classList.add('matched');
             this.addScore(25);
-            this.matchedPairs++;
-
-            if (this.gameManager.audioManager) {
-                this.gameManager.audioManager.playSound('correct');
+            this.matchedPairs++;            if (this.gameManager.audioManager) {
+                this.gameManager.audioManager.playCorrectSound();
             }
 
             if (this.matchedPairs === this.vocabulary.length) {
                 this.addScore(100); // Completion bonus
                 this.endGame();
-            }
-        } else {
+            }        } else {
             // No match
             setTimeout(() => {
                 card1.classList.remove('flipped');
                 card2.classList.remove('flipped');
-            }, 500);
+            }, 800);
 
             if (this.gameManager.audioManager) {
-                this.gameManager.audioManager.playSound('incorrect');
+                this.gameManager.audioManager.playIncorrectSound();
             }
         }
 
@@ -887,9 +909,7 @@ class WordBuilderGame extends BaseGame {
             btn.classList.remove('selected');
         });
         this.updateWordDisplay();
-    }
-
-    showHint() {
+    }    showHint() {
         if (this.selectedLetters.length < this.getCurrentWord().english.length) {
             const correctWord = this.getCurrentWord().english.toLowerCase();
             const nextLetter = correctWord[this.selectedLetters.length];
@@ -899,11 +919,48 @@ class WordBuilderGame extends BaseGame {
             if (availableBtn) {
                 this.selectLetter(availableBtn);
                 this.addScore(-5); // Penalty for hint
+                
+                // Show hint message
+                const feedback = document.querySelector('.game-instructions');
+                if (feedback) {
+                    const originalText = feedback.textContent;
+                    feedback.textContent = `Gợi ý: Đã thêm chữ "${nextLetter.toUpperCase()}" (-5 điểm)`;
+                    feedback.style.color = '#f39c12';
+                    setTimeout(() => {
+                        feedback.textContent = originalText;
+                        feedback.style.color = '';
+                    }, 2000);
+                }
+            } else {
+                // No more hints available
+                const feedback = document.querySelector('.game-instructions');
+                if (feedback) {
+                    const originalText = feedback.textContent;
+                    feedback.textContent = 'Không có gợi ý nào khả dụng!';
+                    feedback.style.color = '#e74c3c';
+                    setTimeout(() => {
+                        feedback.textContent = originalText;
+                        feedback.style.color = '';
+                    }, 2000);
+                }
             }
         }
-    }
-
-    checkWord() {
+    }checkWord() {
+        if (this.selectedLetters.length === 0) {
+            // No letters selected, show hint
+            const feedback = document.querySelector('.typing-feedback') || document.querySelector('.game-instructions');
+            if (feedback) {
+                const originalText = feedback.textContent;
+                feedback.textContent = 'Vui lòng chọn các chữ cái để tạo từ!';
+                feedback.style.color = '#e74c3c';
+                setTimeout(() => {
+                    feedback.textContent = originalText;
+                    feedback.style.color = '';
+                }, 2000);
+            }
+            return;
+        }
+        
         const constructedWord = this.selectedLetters.join('').toLowerCase();
         const correctWord = this.getCurrentWord().english.toLowerCase();
 
@@ -912,28 +969,26 @@ class WordBuilderGame extends BaseGame {
         } else {
             this.handleIncorrectWord();
         }
-    }
-
-    handleCorrectWord() {
+    }    handleCorrectWord() {
         const baseScore = 20;
         const lengthBonus = this.getCurrentWord().english.length * 2;
         this.addScore(baseScore + lengthBonus);
 
         if (this.gameManager.audioManager) {
-            this.gameManager.audioManager.playSound('correct');
+            this.gameManager.audioManager.playCorrectSound();
         }
 
         setTimeout(() => this.nextWord(), 1500);
-    }
-
-    handleIncorrectWord() {
+    }    handleIncorrectWord() {
         if (this.gameManager.audioManager) {
-            this.gameManager.audioManager.playSound('incorrect');
+            this.gameManager.audioManager.playIncorrectSound();
         }
 
         // Show correct answer briefly
         const wordDisplay = document.querySelector('.constructed-word');
-        wordDisplay.innerHTML = `<span class="correct-answer">Đáp án: ${this.getCurrentWord().english.toUpperCase()}</span>`;
+        if (wordDisplay) {
+            wordDisplay.innerHTML = `<span class="correct-answer">Đáp án: ${this.getCurrentWord().english.toUpperCase()}</span>`;
+        }
         
         setTimeout(() => this.nextWord(), 2000);
     }
@@ -945,39 +1000,44 @@ class WordBuilderGame extends BaseGame {
             this.addScore(150); // Completion bonus
             this.endGame();
             return;
-        }
-
-        this.setupCurrentWord();
+        }        this.setupCurrentWord();
         this.renderGame();
-    }
-
-    getCurrentWord() {
-        return this.vocabulary[this.currentWordIndex];
     }
 
     updateWordDisplay() {
         const wordDisplay = document.querySelector('.constructed-word');
-        if (!wordDisplay) return;
-
-        const targetLength = this.getCurrentWord().english.length;
-        const filled = this.selectedLetters.map(letter => `<span class="letter-slot filled">${letter.toUpperCase()}</span>`).join('');
-        const empty = Array(targetLength - this.selectedLetters.length).fill().map(() => '<span class="letter-slot empty">_</span>').join('');
-        
-        wordDisplay.innerHTML = filled + empty;
+        if (wordDisplay) {
+            const currentWord = this.getCurrentWord();
+            let html = '';
+            
+            // Show selected letters
+            for (let i = 0; i < this.selectedLetters.length; i++) {
+                html += `<span class="letter-slot filled">${this.selectedLetters[i].toUpperCase()}</span>`;
+            }
+            
+            // Show empty slots
+            for (let i = this.selectedLetters.length; i < currentWord.english.length; i++) {
+                html += '<span class="letter-slot empty">_</span>';
+            }
+            
+            wordDisplay.innerHTML = html;
+        }
+    }    getCurrentWord() {
+        return this.vocabulary[this.currentWordIndex] || { english: '', vietnamese: '' };
     }
 }
 
 /**
  * Trò chơi dịch nhanh
  */
-class QuickTranslateGame extends BaseGame {
-    constructor(gameManager) {
+class QuickTranslateGame extends BaseGame {    constructor(gameManager) {
         super(gameManager);
         this.gameType = gameManager.gameTypes.QUICK_TRANSLATE;
         this.currentWordIndex = 0;
         this.streak = 0;
         this.maxStreak = 0;
-    }    setupGame(options) {
+        this.keydownHandler = null;
+    }setupGame(options) {
         this.timeLeft = options.timeLimit || 90;
         this.vocabulary = this.gameManager.getGameVocabulary(25);
         this.currentWordIndex = 0;
@@ -1030,16 +1090,12 @@ class QuickTranslateGame extends BaseGame {
                 if (!this.isActive) return;
                 this.handleAnswer(e.target);
             });
-        });
-
-        document.querySelector('.pronounce-btn').addEventListener('click', () => {
+        });        document.querySelector('.pronounce-btn').addEventListener('click', () => {
             if (this.gameManager.audioManager) {
-                this.gameManager.audioManager.speak(this.getCurrentWord().english);
+                this.gameManager.audioManager.speakWord(this.getCurrentWord().english);
             }
-        });
-
-        // Keyboard shortcuts
-        document.addEventListener('keydown', (e) => {
+        });// Keyboard shortcuts
+        this.keydownHandler = (e) => {
             if (!this.isActive) return;
             
             const key = e.key.toUpperCase();
@@ -1050,25 +1106,30 @@ class QuickTranslateGame extends BaseGame {
                     this.handleAnswer(btn);
                 }
             }
-        });
-    }
-
-    generateOptions(correctWord) {
+        };
+        
+        document.addEventListener('keydown', this.keydownHandler);
+    }generateOptions(correctWord) {
         const options = [correctWord.vietnamese];
         const otherWords = this.vocabulary.filter(w => w.vietnamese !== correctWord.vietnamese);
         
-        while (options.length < 4 && otherWords.length > 0) {
-            const randomWord = otherWords[Math.floor(Math.random() * otherWords.length)];
+        // Shuffle other words for random selection
+        const shuffledOthers = this.gameManager.shuffleArray(otherWords);
+        
+        while (options.length < 4 && shuffledOthers.length > 0) {
+            const randomWord = shuffledOthers.pop();
             if (!options.includes(randomWord.vietnamese)) {
                 options.push(randomWord.vietnamese);
             }
-            otherWords.splice(otherWords.indexOf(randomWord), 1);
+        }
+        
+        // If we don't have enough options, fill with placeholder
+        while (options.length < 4) {
+            options.push(`Tùy chọn ${options.length}`);
         }
         
         return this.gameManager.shuffleArray(options);
-    }
-
-    handleAnswer(btn) {
+    }    handleAnswer(btn) {
         const isCorrect = btn.getAttribute('data-correct') === 'true';
         
         // Disable all buttons
@@ -1084,9 +1145,8 @@ class QuickTranslateGame extends BaseGame {
             if (this.timeLeft > 60) score += 5; // Speed bonus
             
             this.addScore(score);
-            
-            if (this.gameManager.audioManager) {
-                this.gameManager.audioManager.playSound('correct');
+              if (this.gameManager.audioManager) {
+                this.gameManager.audioManager.playCorrectSound();
             }
         } else {
             btn.classList.add('incorrect');
@@ -1100,14 +1160,12 @@ class QuickTranslateGame extends BaseGame {
             });
             
             if (this.gameManager.audioManager) {
-                this.gameManager.audioManager.playSound('incorrect');
+                this.gameManager.audioManager.playIncorrectSound();
             }
         }
 
         setTimeout(() => this.nextQuestion(), 1500);
-    }
-
-    nextQuestion() {
+    }    nextQuestion() {
         this.currentWordIndex++;
         
         if (this.currentWordIndex >= this.vocabulary.length) {
@@ -1121,9 +1179,16 @@ class QuickTranslateGame extends BaseGame {
         this.renderGame();
     }
 
-    getCurrentWord() {
-        return this.vocabulary[this.currentWordIndex];
-    }    showResults() {
+    end() {
+        // Clean up keyboard event listener
+        if (this.keydownHandler) {
+            document.removeEventListener('keydown', this.keydownHandler);
+            this.keydownHandler = null;
+        }
+        super.end();
+    }getCurrentWord() {
+        return this.vocabulary[this.currentWordIndex] || { english: 'hello', vietnamese: 'xin chào' };
+    }showResults() {
         const container = document.getElementById('games-container');
         if (!container) return;
 

@@ -11,10 +11,8 @@ const UIManager = {
         const tabButtons = document.querySelectorAll('.tab-button');
         const tabContents = document.querySelectorAll('.tab-pane');
 
-        console.log('UIManager: Tìm thấy', tabButtons.length, 'tab buttons và', tabContents.length, 'tab contents');
-
-        tabButtons.forEach(button => {
-            button.addEventListener('click', () => {
+        console.log('UIManager: Tìm thấy', tabButtons.length, 'tab buttons và', tabContents.length, 'tab contents');        tabButtons.forEach(button => {
+            button.addEventListener('click', async () => {
                 const targetTab = button.dataset.tab;
                 console.log('UIManager: Tab button clicked, targetTab:', targetTab);
                 
@@ -31,13 +29,12 @@ const UIManager = {
                 } else {
                     console.error('UIManager: Không tìm thấy tab content với id:', targetTab);
                 }
-                
-                // Initialize tab-specific functionality
-                this.initializeTab(targetTab);
+                  // Initialize tab-specific functionality
+                await this.initializeTab(targetTab);
             });
         });
     },// Khởi tạo chức năng riêng cho từng tab
-    initializeTab(tabId) {
+    async initializeTab(tabId) {
         console.log('UIManager: initializeTab được gọi với tabId:', tabId);
         switch(tabId) {
             case 'learn':
@@ -75,6 +72,14 @@ const UIManager = {
                 console.log('UIManager: Switching to cloud tab');
                 this.updateGitHubAuthStatus();
                 this.updateDataStatistics();
+                break;            case 'games':
+                console.log('UIManager: Switching to games tab');
+                // Initialize GameManager when games tab is activated
+                if (typeof initGamesTab === 'function') {
+                    await initGamesTab();
+                } else {
+                    console.warn('UIManager: initGamesTab function not found');
+                }
                 break;
             case 'settings-tab':
                 // Already handled in main app
