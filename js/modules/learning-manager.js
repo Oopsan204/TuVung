@@ -480,11 +480,9 @@ const LearningManager = {
         nextWord() {
             LearningManager.nextWord();
             this.showNextWord();
-        },
-
-        speakCurrentWord() {
+        },        speakCurrentWord() {
             if (this.currentWord && window.AudioManager) {
-                window.AudioManager.speak(this.currentWord);
+                window.AudioManager.speakWord(this.currentWord);
                 
                 // Add visual feedback
                 const speakBtn = document.getElementById('completion-speak');

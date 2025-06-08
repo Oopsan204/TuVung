@@ -102,17 +102,7 @@ function setupGlobalEventListeners() {
         completionInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter' && LearningManager.completionTask) {
                 LearningManager.completionTask.checkAnswer();
-            }
-        });
-    }
-    
-    const completionSpeakBtn = document.getElementById('completion-speak');
-    if (completionSpeakBtn) {
-        completionSpeakBtn.addEventListener('click', () => {
-            if (LearningManager.completionTask) {
-                LearningManager.completionTask.speakCurrentWord();
-            }
-        });
+            }        });
     }
     
     // SRS task event listeners

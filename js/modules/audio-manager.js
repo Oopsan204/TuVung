@@ -1,5 +1,8 @@
 // Module quản lý âm thanh và phát âm
 const AudioManager = {
+    currentUtterance: null,
+    isSpeaking: false,
+
     // Khởi tạo âm thanh
     init() {
         this.loadVoicesList();
@@ -15,33 +18,70 @@ const AudioManager = {
                 return;
             }
 
-            // Dừng tất cả giọng nói hiện tại
-            window.speechSynthesis.cancel();
-
-            const utterance = new SpeechSynthesisUtterance(word);
-            
-            // Cài đặt tốc độ
-            const speechRate = localStorage.getItem('speechRate') || '1';
-            utterance.rate = parseFloat(speechRate);
-            
-            // Cài đặt giọng nói
-            const selectedVoice = localStorage.getItem('selectedVoice');
-            if (selectedVoice) {
-                const voices = window.speechSynthesis.getVoices();
-                const voice = voices.find(v => v.name === selectedVoice);
-                if (voice) {
-                    utterance.voice = voice;
-                }
+            // Nếu đang phát âm, dừng lại trước
+            if (this.isSpeaking || this.currentUtterance) {
+                this.stopSpeaking();
             }
 
-            utterance.onend = () => resolve();
-            utterance.onerror = (error) => {
-                console.error('Lỗi text-to-speech:', error);
-                reject(error);
-            };
+            // Chờ một chút để đảm bảo speech synthesis đã dừng hoàn toàn
+            setTimeout(() => {
+                const utterance = new SpeechSynthesisUtterance(word);
+                this.currentUtterance = utterance;
+                this.isSpeaking = true;
+                
+                // Cài đặt tốc độ
+                const speechRate = localStorage.getItem('speechRate') || '1';
+                utterance.rate = parseFloat(speechRate);
+                
+                // Cài đặt giọng nói
+                const selectedVoice = localStorage.getItem('selectedVoice');
+                if (selectedVoice) {
+                    const voices = window.speechSynthesis.getVoices();
+                    const voice = voices.find(v => v.name === selectedVoice);
+                    if (voice) {
+                        utterance.voice = voice;
+                    }
+                }
 
-            window.speechSynthesis.speak(utterance);
+                utterance.onend = () => {
+                    this.isSpeaking = false;
+                    this.currentUtterance = null;
+                    resolve();
+                };
+                
+                utterance.onerror = (error) => {
+                    this.isSpeaking = false;
+                    this.currentUtterance = null;
+                    // Chỉ log lỗi nếu không phải lỗi "interrupted"
+                    if (error.error !== 'interrupted') {
+                        console.error('Lỗi text-to-speech:', error);
+                    }
+                    resolve(); // Resolve thay vì reject để không gây lỗi
+                };
+
+                utterance.onstart = () => {
+                    this.isSpeaking = true;
+                };
+
+                try {
+                    window.speechSynthesis.speak(utterance);
+                } catch (error) {
+                    this.isSpeaking = false;
+                    this.currentUtterance = null;
+                    console.error('Lỗi khi phát âm:', error);
+                    resolve();
+                }
+            }, 100);
         });
+    },
+
+    // Dừng phát âm hiện tại
+    stopSpeaking() {
+        if (window.speechSynthesis && (this.isSpeaking || window.speechSynthesis.speaking)) {
+            window.speechSynthesis.cancel();
+            this.isSpeaking = false;
+            this.currentUtterance = null;
+        }
     },
 
     // Tải danh sách giọng đọc
